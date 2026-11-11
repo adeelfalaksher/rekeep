@@ -18,7 +18,6 @@ const glyphs = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   box: '<path d="M3 7 12 3l9 4v10l-9 4-9-4V7Zm0 0 9 4 9-4m-9 4v10"/>',
   shield: '<path d="M12 3 4 6v5c0 5 3.2 8 8 10 4.8-2 8-5 8-10V6l-8-3Z"/><path d="m9 12 2 2 4-4"/>',
-  install: '<path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/>',
   close: '<path d="m6 6 12 12M18 6 6 18"/>',
 }
 const icon = (name, size = 20) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyphs[name]}</svg>`
@@ -32,7 +31,6 @@ let selectedId = params.get('case')
 let selectedItem
 let selectionCase
 let editing = false
-let installEvent
 
 async function api(action, body, id) {
   const query = new URLSearchParams({ action })
@@ -49,58 +47,79 @@ async function api(action, body, id) {
 }
 
 function nav(kind) {
-  header.className = 'header'
   const current = location.pathname
   const active = (route) => current === route ? ' aria-current="page"' : ''
   const links = kind === 'workspace'
-    ? `<div class="nav-tools"><a class="text-link" href="/workspace">Inbox</a><button type="button" class="plain install" data-action="install">${icon('install',18)} <span>Install</span></button><button type="button" class="avatar" aria-label="Account" data-action="account">${safe((session.shop || session.email)[0].toUpperCase())}</button></div>`
+    ? `<div class="nav-tools"><a class="text-link" href="/workspace"${active('/workspace')}>Inbox</a><button type="button" class="avatar" aria-label="Account" data-action="account">${safe((session.shop || session.email)[0].toUpperCase())}</button></div>`
     : kind === 'auth' ? '<a class="text-link" href="/">Back to home</a>'
-    : `<div class="nav-center"><a class="text-link" href="/"${active('/')}>Overview</a><a class="text-link" href="/intro"${active('/intro')}>How it works</a></div><div class="nav-tools"><a class="btn outline small signin" href="/signin">Sign in</a><a class="btn primary small" href="/signup">Get started</a></div>`
+    : `<div class="nav-center"><a class="text-link" href="/intro"${active('/intro')}>How it works</a><a class="text-link" href="/#security">Security</a><a class="text-link" href="/signin">Sign in</a></div><div class="nav-tools"><a class="btn primary small" href="/signup">Get started</a></div>`
+  header.className = 'header header-' + kind
   header.innerHTML = `<div class="shell header-inner">${brand}<nav aria-label="Main navigation" class="head-links nav-${kind}">${links}</nav></div>`
-  footer.innerHTML = kind === 'workspace' || kind === 'auth' ? '' : `<div class="shell foot-inner">${brand}<nav aria-label="Footer navigation"><a href="/intro">How it works</a><a href="/signin">Sign in</a></nav></div>`
+  footer.innerHTML = kind === 'workspace' || kind === 'auth' ? '' : `<div class="shell foot-inner"><div class="footer-main">
+    <div><a href="/" class="footer-mark" aria-label="Rekeep home"><img src="/mark.svg" width="42" height="42" alt=""></a><p class="footer-heading">Refund the right item.<br><span>Keep the rest of the order.</span></p></div>
+    <nav aria-label="Footer navigation"><a href="/intro">How it works</a><a href="/#security">Security</a><a href="/signin">Sign in</a><a class="btn primary small" href="/signup">Get started ${icon('arrow',15)}</a></nav>
+    </div><div class="footer-base"><span>Rekeep</span><a href="#top">Back to top ↑</a></div><div class="footer-accent" aria-hidden="true"></div></div>`
 }
 
 const steps = [
-  { title: 'Open a refund case', copy: 'Add the order number, the items purchased, and the customer’s message.', icon: 'inbox' },
-  { title: 'Review the affected item', copy: 'Read the evidence behind the match and confirm the exact item and refund amount.', icon: 'box' },
-  { title: 'Keep the refund record', copy: 'Save the refund reference with the case so you can find it later.', icon: 'receipt' },
+  { title: 'Open a refund case', label: 'Customer message', copy: 'Add the order number, purchased items, and the message that prompted the return.', icon: 'inbox' },
+  { title: 'Review the affected item', label: 'Item review', copy: 'Read the evidence behind the match, then confirm the item and the amount.', icon: 'box' },
+  { title: 'Keep the refund record', label: 'Refund record', copy: 'Save the provider’s refund reference with the order so you can find it later.', icon: 'receipt' },
 ]
 
-function tiles() {
-  return `<div class="product-grid" aria-label="Example order and item-level refund">
-    <div class="product-tile order-tile"><div class="tile-top">${icon('receipt',17)} <span>Order #2048</span></div><strong>$38.00</strong><small>3 items purchased</small></div>
-    <div class="product-tile photo-tile mug-tile" aria-hidden="true"></div>
-    <div class="product-tile paper-tile"><div class="tile-top">${icon('quote',17)} <span>Customer message</span></div><blockquote>“The mug arrived with a chip on the rim.”</blockquote></div>
-    <div class="product-tile amount-tile"><div class="tile-top">${icon('check',17)} <span>Refund recorded</span></div><strong>$18.00</strong><small>Ceramic mug · Oat</small></div>
-    <div class="product-tile photo-tile pack-tile" aria-hidden="true"></div>
-    <div class="product-tile paper-tile item-tile"><div class="tile-top">${icon('box',17)} <span>Affected item</span></div><strong>Ceramic mug</strong><small>Oat · 12 oz</small></div>
-    <div class="product-tile keep-tile"><div class="tile-top">${icon('shield',17)} <span>Amount kept</span></div><strong>$20.00</strong><small>Notebook and pen</small></div>
-    <div class="product-tile photo-tile desk-tile" aria-hidden="true"></div>
-  </div>`
+const breakdown = '<dl class="preview-breakdown"><dt>Original order</dt><dd>$38.00</dd><dt>Mug refund</dt><dd>$18.00</dd><dt>Amount kept</dt><dd>$20.00</dd></dl>'
+const previews = [
+  `<blockquote class="preview-quote">“The ceramic mug arrived with a chip on the rim. The notebook and pen are fine.”</blockquote><p class="preview-meta">Order #2048 <span>3 purchased items</span></p>`,
+  `<p class="preview-match"><span>${icon('check',17)} Ceramic mug</span><strong>$18.00</strong></p><p class="preview-meta">Affected item <span>Oat · 12 oz</span></p><blockquote class="preview-quote">“The ceramic mug arrived with a chip on the rim.”</blockquote>`,
+  breakdown,
+]
+
+function workflowPreview() {
+  return `<section class="shell workflow-preview" aria-labelledby="workflow-title">
+    <h2 id="workflow-title">One record for every return.</h2>
+    <div class="preview-tabs" role="tablist" aria-label="Refund workflow">
+      ${steps.map(({label}, i) => `<button type="button" role="tab" id="preview-tab-${i}" aria-controls="preview-panel-${i}" aria-selected="${i === 0}" tabindex="${i ? -1 : 0}" data-preview="${i}">${label}</button>`).join('')}
+    </div>
+    <div class="preview-frame">
+      <figure class="preview-photo"><img src="/return-photo.webp" width="1672" height="941" alt="A chipped ceramic mug, notebook and pen beside an open shipping box" fetchpriority="high"></figure>
+      ${steps.map(({title,icon: symbol}, i) => `<article class="preview-panel" role="tabpanel" id="preview-panel-${i}" aria-labelledby="preview-tab-${i}" tabindex="0" ${i ? 'hidden' : ''}>
+        <div class="preview-heading"><span class="tile">${icon(symbol,19)}</span><h3>${title}</h3></div>${previews[i]}
+      </article>`).join('')}
+    </div>
+  </section>`
 }
 
 function home() {
   nav('public')
-  main.innerHTML = `<section class="shell hero"><div class="product-line">Rekeep for merchants</div>
-    <div class="hero-copy"><h1>Refund the right item.<br>Keep the rest of the order.</h1>
-      <p class="hero-description">Match a customer’s complaint to the item they bought, review the amount, and keep the refund record with the order.</p>
-      <a class="btn primary" href="/signup">Create an account ${icon('arrow',17)}</a>
-    </div></section>
-    ${tiles()}
-    <section class="shell feature-row" aria-label="Refund workflow">${steps.map(({title,copy,icon: symbol}) => `<article><span class="tile">${icon(symbol,19)}</span><h2>${title}</h2><p>${copy}</p></article>`).join('')}</section>`
+  main.innerHTML = `<section class="shell hero">
+    <div class="hero-copy"><p class="hero-kicker">Meet Rekeep</p>
+      <h1>Refund the right item.<br><span>Keep the rest of the order<span class="accent">.</span></span></h1>
+      <div class="hero-note"><p>When one item arrives damaged, match the customer’s message to the order and record only the affected refund.</p><p><strong>Keep the original order, item and refund reference together.</strong></p></div>
+    </div>
+  </section>
+  ${workflowPreview()}
+  <section class="shell practice-section" aria-labelledby="practice-title">
+    <div class="practice-copy"><h2 id="practice-title">Handle the refund without losing the order.</h2><p>Keep track of the evidence, the amount, and the provider reference from the same case.</p><a href="/signup" class="btn primary action-raised">Start a refund case ${icon('arrow',17)}</a></div>
+    <div class="practice-cards">
+      <article class="practice-card"><h3>Item selection</h3><div><strong>Customer message</strong><p>“The mug arrived chipped. The notebook and pen are fine.”</p></div><div><strong>With Rekeep</strong><p>Review the $18 mug against the $38 order and confirm which line to refund.</p></div></article>
+      <article class="practice-card"><h3>Refund history</h3><div><strong>After the refund</strong><p>The case still needs the item, amount and provider reference for follow-up.</p></div><div><strong>With Rekeep</strong><p>Save the $18 refund record and see the $20 that stayed on the order.</p></div></article>
+    </div>
+  </section>
+  <section class="shell security-section" id="security"><div><span class="tile">${icon('shield',22)}</span><h2>Private cases. Reviewed refunds.</h2></div><p>Sign in to access your store’s cases. Each refund starts with the item you select and the amount you review.</p><a class="btn outline" href="/intro">See how it works ${icon('arrow',16)}</a></section>`
 }
 
 function intro() {
   nav('public')
-  main.innerHTML = `<section class="shell hero intro-hero"><div class="product-line">How it works</div>
-    <div class="hero-copy"><h1>From complaint<br>to refund record.</h1>
-      <p class="hero-description">Follow the order through each step and decide what to refund before saving the case.</p>
-      <a class="btn primary" href="/signup">Create an account ${icon('arrow',17)}</a>
-    </div></section>
-    <section class="shell workflow-list" aria-label="Refund steps">
-      ${steps.map(({title,copy,icon: symbol}, index) => `<article><span class="step-index">0${index+1}</span><div><h2>${title}</h2><p>${copy}</p></div><span class="tile">${icon(symbol,21)}</span></article>`).join('')}
-    </section>`
+  main.innerHTML = `<section class="shell hero intro-hero"><div class="hero-copy"><p class="hero-kicker">How it works</p>
+    <h1>From complaint<br><span>to refund record<span class="accent">.</span></span></h1>
+    <div class="hero-note"><p>Check the order, choose the affected item, and keep the refund reference with the case.</p></div>
+  </div></section>
+  <section class="shell workflow-list" aria-label="Refund steps">
+    ${steps.map(({title,copy,icon: symbol}, i) => `<article><span class="step-index">0${i + 1}</span><div><h2>${title}</h2><p>${copy}</p></div><span class="tile">${icon(symbol,21)}</span></article>`).join('')}
+    <a class="btn primary action-raised" href="/signup">Create an account ${icon('arrow',17)}</a>
+  </section>`
 }
+
 function authView(signup) {
   nav('auth')
   const label = signup ? 'Create account' : 'Sign in'
@@ -228,24 +247,43 @@ function refundDialog(action) {
 function account() {
   show('Your account', `<div class="stack"><p><strong>${safe(session.shop)}</strong></p><p class="subtle">${safe(session.email)}</p><form class="stack" data-action="signout"><p class="feedback" role="alert" hidden></p><button class="btn outline full" type="submit">Sign out</button></form></div>`)
 }
-async function install() {
-  if (installEvent) {
-    const prompt = installEvent
-    installEvent = undefined
-    await prompt.prompt()
-  } else {
-    show('Install Rekeep', '<div class="stack"><p>On iPhone, open Safari’s Share menu and choose <strong>Add to Home Screen</strong>.</p><p>In Chrome, open the browser menu and look for <strong>Install Rekeep</strong> or <strong>Add to Home screen</strong>.</p></div>')
-  }
-}
 function reindex() {
   const rows = dialog.querySelectorAll('.order-fields')
   rows.forEach((row, index) => { row.querySelector('legend').textContent = 'Item ' + (index + 1) })
   const add = dialog.querySelector('.add-line')
   if (add) add.disabled = rows.length >= 10
 }
-document.addEventListener('click', async (event) => {
-  const control = event.target.closest('[data-action],[data-filter],[data-case],[data-item],.back-mobile')
+function selectPreview(tab) {
+  const tabs = Array.from(document.querySelectorAll('[data-preview]'))
+  for (const candidate of tabs) {
+    const active = candidate === tab
+    candidate.tabIndex = active ? 0 : -1
+    candidate.setAttribute('aria-selected', String(active))
+    document.getElementById(candidate.getAttribute('aria-controls')).hidden = !active
+  }
+}
+
+document.addEventListener('keydown', (event) => {
+  const tab = event.target.closest('[data-preview]')
+  if (!tab) return
+  const tabs = Array.from(tab.parentElement.querySelectorAll('[data-preview]'))
+  const index = tabs.indexOf(tab)
+  const target = {
+    ArrowLeft: tabs[(index + tabs.length - 1) % tabs.length],
+    ArrowRight: tabs[(index + 1) % tabs.length],
+    Home: tabs[0],
+    End: tabs.at(-1),
+  }[event.key]
+  if (!target) return
+  event.preventDefault()
+  selectPreview(target)
+  target.focus()
+})
+
+document.addEventListener('click', (event) => {
+  const control = event.target.closest('[data-action],[data-filter],[data-case],[data-item],[data-preview],.back-mobile')
   if (!control || control.tagName === 'FORM' || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+  if (control.hasAttribute('data-preview')) return selectPreview(control)
   const action = control.dataset.action
   if (control.matches('.back-mobile') && session) { event.preventDefault(); return openCase(null) }
   if (control.dataset.case) { event.preventDefault(); return openCase(control.dataset.case) }
@@ -263,7 +301,6 @@ document.addEventListener('click', async (event) => {
   if (action === 'new') newCase()
   if (action === 'close') dialog.close()
   if (action === 'account') account()
-  if (action === 'install') await install()
   if (action === 'edit') { editing = true; workspace(); el('#msg').focus() }
   if (action === 'cancel-edit') { editing = false; workspace(); main.querySelector('[data-action="edit"]')?.focus() }
   if (action === 'record' || action === 'braintree') refundDialog(action)
@@ -321,7 +358,6 @@ document.addEventListener('submit', async (event) => {
     feedback(form, error.message)
   } finally { button.disabled = false }
 })
-window.addEventListener('beforeinstallprompt', (event) => { event.preventDefault(); installEvent = event })
 window.addEventListener('popstate', () => {
   if (!session || location.pathname !== '/workspace') return
   selectedId = new URLSearchParams(location.search).get('case')
@@ -334,4 +370,3 @@ else if (path === '/confirm') confirmLink()
 else if (path === '/signin' || path === '/signup') authView(path === '/signup')
 else if (path === '/intro') intro()
 else home()
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {})
