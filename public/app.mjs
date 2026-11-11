@@ -57,8 +57,8 @@ function nav(kind) {
   header.innerHTML = `<div class="shell header-inner">${brand}<nav aria-label="Main navigation" class="head-links nav-${kind}">${links}</nav></div>`
   footer.innerHTML = kind === 'workspace' || kind === 'auth' ? '' : `<div class="shell foot-inner"><div class="footer-main">
     <div><a href="/" class="footer-mark" aria-label="Rekeep home"><img src="/mark.svg" width="42" height="42" alt=""></a><p class="footer-heading">Refund the right item.<br><span>Keep the rest of the order.</span></p></div>
-    <nav aria-label="Footer navigation"><a href="/intro">How it works</a><a href="/#security">Security</a><a href="/signin">Sign in</a><a class="btn primary small" href="/signup">Get started ${icon('arrow',15)}</a></nav>
-    </div><div class="footer-base"><span>Rekeep</span><a href="#top">Back to top ↑</a></div><div class="footer-accent" aria-hidden="true"></div></div>`
+    <nav aria-label="Footer navigation"><strong>Rekeep</strong><a href="/intro">How it works</a><a href="/#compare">Compare</a><a href="/#security">Security</a></nav>
+    </div><div class="footer-base"><span>© ${new Date().getFullYear()} Rekeep</span><div><a href="/signin">Sign in</a><a href="#top" aria-label="Back to top">↑</a></div></div><div class="footer-accent" aria-hidden="true"></div></div>`
 }
 
 const steps = [
@@ -76,7 +76,7 @@ const workflow = [
 ]
 
 function still(image, label, loading = 'lazy') {
-  return `<img src="/workflow-${image}.webp" width="1280" height="530" alt="${safe(label)}" loading="${loading}">`
+  return `<img src="/workflow-${image}.webp" width="2160" height="1170" alt="${safe(label)}" loading="${loading}">`
 }
 
 function workflowPreview() {
@@ -86,21 +86,21 @@ function workflowPreview() {
       ${workflow.map(({tab}, i) => `<button type="button" role="tab" id="preview-tab-${i}" aria-controls="preview-panel-${i}" aria-selected="${i === 0}" tabindex="${i ? -1 : 0}" data-preview="${i}">${tab}</button>`).join('')}
     </div>
     ${workflow.map(({title,copy,image}, i) => `<article class="preview-frame preview-panel" role="tabpanel" id="preview-panel-${i}" aria-labelledby="preview-tab-${i}" tabindex="0" ${i ? 'hidden' : ''}>
-      <div class="preview-photo">${still(image,title,i === 0 ? 'eager' : 'lazy')}</div>
       <div class="preview-caption"><h3>${title}</h3><p>${copy}</p></div>
+      <div class="preview-photo">${still(image,title,i === 0 ? 'eager' : 'lazy')}</div>
     </article>`).join('')}
   </section>`
 }
 
-function videoPlayer(kind) {
-  return `<div class="media-device media-${kind}">
-    <video muted loop playsinline preload="metadata" poster="/workflow-review.webp" data-preview-video aria-label="Rekeep refund workflow with sample data"><source src="/workflow-tour.mp4" type="video/mp4"></video>
-    <button class="media-play" type="button" data-action="watch" aria-label="Play the refund workflow video"><span aria-hidden="true">▶</span></button>
-    <button class="media-motion" type="button" data-action="motion" aria-label="Pause preview animation" hidden>Pause</button>
+function videoPlayer() {
+  return `<div class="media-device">
+    <video playsinline preload="none" poster="/workflow-poster.webp" aria-label="Rekeep refund workflow with sample data"><source src="/workflow-tour.mp4" type="video/mp4"><track kind="captions" src="/workflow-tour.vtt" srclang="en" label="English"></video>
+    <button class="media-play" type="button" data-action="watch" aria-label="Play the refund workflow video"><span aria-hidden="true"></span></button>
+    <div class="media-end" hidden><div><img src="/mark.svg" width="60" height="60" alt=""><strong>Rekeep</strong></div><button type="button" data-action="watch">Replay video</button></div>
   </div>`
 }
 
-const capabilities = [...workflow, { title: "Filter resolved cases", image: "filter", copy: "Find completed refunds without searching through the open inbox." }]
+const capabilities = [workflow[2], { title: 'Filter resolved cases', image: 'filter', copy: 'Find completed refunds without searching through the open inbox.' }, workflow[4]]
 
 const comparisons = [
   ['Customer context', 'Message thread', 'Copied notes', 'Message next to the order'],
@@ -119,17 +119,17 @@ const faq = [
 function home() {
   nav('public')
   main.innerHTML = `<section class="landing-hero">
-    <div class="hero-split"><h1>Give product returns<br>one clear next step<span class="accent">.</span></h1>
+    <div class="hero-split"><h1>Give product<br>returns one clear<br>next step<span class="accent">.</span></h1>
+    <img class="hero-person" src="/merchant-hero.webp" width="604" height="900" alt="" fetchpriority="high">
     <div class="hero-side"><p><strong>One damaged item can put a whole order in doubt.<br><span class="accent">See exactly what to refund.</span></strong></p>
     <p>Match a customer’s message to a purchased item. Review the amount and keep the refund reference with the order.</p></div></div>
     <div class="hero-media">
+      <div class="hero-landscape hero-landscape-left" aria-hidden="true"></div>
+      <div class="hero-landscape hero-landscape-right" aria-hidden="true"></div>
       <div class="hero-ring" aria-hidden="true"></div>
-      <div class="hero-still hero-still-left" aria-hidden="true">${still('inbox','','eager')}</div>
-      <div class="hero-still hero-still-right" aria-hidden="true">${still('receipt','','eager')}</div>
-      <div class="hero-floating" aria-hidden="true">${still('review','','eager')}</div>
-      ${videoPlayer('hero')}
+      <div class="hero-actions"><a href="/signup" class="btn primary action-raised">Start a refund case ${icon('arrow',17)}</a></div>
+      ${videoPlayer()}
     </div>
-    <div class="hero-actions"><a href="/signup" class="btn primary action-raised">Start a refund case ${icon('arrow',17)}</a><a href="#workflow-title" class="btn outline">See the workflow</a></div>
   </section>
   <section class="shell hero meet-section"><div class="hero-copy"><p class="hero-kicker">Meet Rekeep</p>
     <h2>Item-level returns and refunds,<br><span>in one workspace<span class="accent">.</span></span></h2>
@@ -137,7 +137,7 @@ function home() {
     <p><strong>You review the item. Rekeep keeps the record.</strong></p></div>
   </div></section>
   ${workflowPreview()}
-  <section class="shell live-step"><h2>Give every case a clear next step.</h2><p>Follow a sample order from the refund inbox to the saved provider reference.</p>${videoPlayer('inline')}</section>
+  <div class="landscape-break" aria-hidden="true"></div>
   <section class="shell practice-section" aria-labelledby="practice-title">
     <div class="practice-copy"><h2 id="practice-title">Handle the refund without losing the order.</h2><p>Keep the evidence, decision, and provider reference with the original order.</p><a href="/signup" class="btn primary action-raised">Start a refund case ${icon('arrow',17)}</a></div>
     <div class="practice-cards">
@@ -146,17 +146,22 @@ function home() {
     </div>
   </section>
   <section class="shell comparison-section" id="compare"><h2>See where every part of the refund lives.</h2>
-    <div class="comparison-scroll" role="region" aria-label="Compare refund workflows" tabindex="0"><table><thead><tr><th scope="col">Workflow</th><th scope="col">Email thread</th><th scope="col">Spreadsheet</th><th scope="col">Rekeep</th></tr></thead>
-    <tbody>${comparisons.map(([label,...values])=>`<tr><th scope="row">${label}</th>${values.map(value=>`<td>${value}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <div class="comparison-scroll" role="region" aria-label="Compare refund workflows" tabindex="0"><table><thead><tr><th scope="col">Workflow</th><th scope="col">Rekeep</th><th scope="col">Email thread</th><th scope="col">Spreadsheet</th></tr></thead>
+    <tbody>${comparisons.map(([label,email,sheet,rekeep])=>`<tr><th scope="row">${label}</th><td>${rekeep}</td><td>${email}</td><td>${sheet}</td></tr>`).join('')}</tbody></table></div>
   </section>
   <section class="shell capabilities"><h2>What you get in the workspace</h2><div class="capability-grid">
-    ${capabilities.map(({title,copy,image})=>`<article class="capability"><h3>${title}</h3><p>${copy}</p><div>${still(image,title)}</div></article>`).join('')}
+    ${capabilities.map(({title,copy,image})=>`<article class="capability"><header><h3>${title}</h3><p>${copy}</p></header><figure>${still(image,title)}</figure></article>`).join('')}
   </div></section>
   <section class="shell timeline"><h2>How a refund case moves</h2><ol>${steps.map(({title,copy},i)=>`<li><span>0${i+1}.</span><div><h3>${title}</h3><p>${copy}</p></div></li>`).join('')}</ol></section>
   <section class="shell security-section" id="security"><div><span class="tile">${icon('shield',22)}</span><h2>Private cases. Reviewed refunds.</h2></div><p>Sign in to access your store’s cases. Review the item and amount before approving a refund.</p><a class="btn outline" href="/intro">See how it works ${icon('arrow',16)}</a></section>
-  <section class="shell faq-section"><h2>FAQ</h2>${faq.map(([question,answer])=>`<details><summary>${question}</summary><p>${answer}</p></details>`).join('')}</section>
+  <section class="shell faq-section"><h2>FAQ</h2><div class="faq-list">${faq.map(([question,answer])=>`<details><summary>${question}</summary><p>${answer}</p></details>`).join('')}</div></section>
   <section class="shell closing-cta"><h2>Ready for the next return?</h2><p>Open your workspace and keep each refund with its order.</p><div class="hero-actions"><a class="btn primary" href="/signup">Create an account</a><a class="btn outline" href="/signin">Sign in</a></div></section>`
-  initializeMedia()
+  const player = main.querySelector('.media-device video')
+  player.addEventListener('ended', () => {
+    const ending = player.parentElement.querySelector('.media-end')
+    ending.hidden = false
+    ending.querySelector('button').focus({ preventScroll: true })
+  })
 }
 
 function intro() {
@@ -184,7 +189,7 @@ function authView(signup) {
       <p class="feedback" role="alert" hidden></p><button class="btn primary full" type="submit">${label} ${icon('arrow',18)}</button>
     </form>
     <p class="switch">${signup ? 'Already have an account? <a href="/signin">Sign in</a>' : 'New to Rekeep? <a href="/signup">Create an account</a>'}</p></section>
-    <aside class="auth-art"><span class="auth-brand"><img src="/mark.svg" width="56" height="56" alt=""></span><div><h2>A clear record for every refund.</h2><p>Find the complaint, order line, and receipt together.</p></div></aside></div>`
+    <aside class="auth-art"><picture><source media="(prefers-reduced-motion: reduce)" srcset="/auth-motion-still.webp"><img src="/auth-motion.gif" width="680" height="560" alt=""></picture><div><h2>A clear record for every refund.</h2><p>Find the complaint, order line, and receipt together.</p></div></aside></div>`
 }
 function confirmation(message, link) {
   nav('auth')
@@ -304,51 +309,15 @@ function reindex() {
   const add = dialog.querySelector('.add-line')
   if (add) add.disabled = rows.length >= 10
 }
-let mediaObserver
-const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
-function initializeMedia() {
-  if (reduceMotion.matches || !('IntersectionObserver' in window)) return
-  mediaObserver = new IntersectionObserver((entries) => {
-    for (const { target, isIntersecting } of entries) {
-      if (isIntersecting && !target.dataset.paused && !dialog.open) target.play().catch(() => {})
-      else target.pause()
-    }
-  }, { threshold: 0.38 })
-  for (const video of document.querySelectorAll('[data-preview-video]')) {
-    const button = video.parentElement.querySelector('[data-action="motion"]')
-    button.hidden = false
-    mediaObserver.observe(video)
-  }
-}
-
-function watchWorkflow() {
-  for (const video of document.querySelectorAll('[data-preview-video]')) video.pause()
-  show('Rekeep refund workflow', '<video class="workflow-film" controls playsinline preload="metadata" poster="/workflow-review.webp"><source src="/workflow-tour.mp4" type="video/mp4"><track kind="captions" src="/workflow-tour.vtt" srclang="en" label="English"></video><p class="subtle workflow-film-caption">Recorded in the Rekeep workspace with a sample order.</p>')
-  const player = dialog.querySelector('video')
+function watchWorkflow(button) {
+  const frame = button.closest('.media-device')
+  const player = frame.querySelector('video')
+  if (player.ended) player.currentTime = 0
+  frame.querySelector('.media-end').hidden = true
+  frame.querySelector('.media-play').hidden = true
+  player.controls = true
+  player.focus({ preventScroll: true })
   player.play().catch(() => {})
-  dialog.addEventListener('close', () => {
-    player.pause()
-    for (const video of document.querySelectorAll('[data-preview-video]')) {
-      if (!mediaObserver) continue
-      mediaObserver.unobserve(video)
-      mediaObserver.observe(video)
-    }
-  }, { once: true })
-}
-
-function toggleMotion(button) {
-  const video = button.parentElement.querySelector('video')
-  if (video.dataset.paused) {
-    delete video.dataset.paused
-    video.play().catch(() => {})
-    button.textContent = 'Pause'
-    button.setAttribute('aria-label', 'Pause preview animation')
-  } else {
-    video.dataset.paused = 'true'
-    video.pause()
-    button.textContent = 'Play'
-    button.setAttribute('aria-label', 'Play preview animation')
-  }
 }
 
 function selectPreview(tab) {
@@ -399,8 +368,7 @@ document.addEventListener('click', (event) => {
   if (action === 'new') newCase()
   if (action === 'close') dialog.close()
   if (action === 'account') account()
-  if (action === 'watch') watchWorkflow()
-  if (action === 'motion') toggleMotion(control)
+  if (action === 'watch') watchWorkflow(control)
   if (action === 'edit') { editing = true; workspace(); el('#msg').focus() }
   if (action === 'cancel-edit') { editing = false; workspace(); main.querySelector('[data-action="edit"]')?.focus() }
   if (action === 'record' || action === 'braintree') refundDialog(action)

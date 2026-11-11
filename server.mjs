@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import handler from './api/rekeep.mjs'
 
 const routes = new Set(['/', '/signin', '/signup', '/workspace', '/intro', '/confirm'])
-const mime = { html: 'text/html; charset=utf-8', css: 'text/css; charset=utf-8', mjs: 'text/javascript; charset=utf-8', js: 'text/javascript; charset=utf-8', svg: 'image/svg+xml', webp: 'image/webp', mp4: 'video/mp4', vtt: 'text/vtt; charset=utf-8' }
+const mime = { html: 'text/html; charset=utf-8', css: 'text/css; charset=utf-8', mjs: 'text/javascript; charset=utf-8', js: 'text/javascript; charset=utf-8', svg: 'image/svg+xml', webp: 'image/webp', gif: 'image/gif', mp4: 'video/mp4', vtt: 'text/vtt; charset=utf-8' }
 
 const server = createServer(async (req, res) => {
   const path = new URL(req.url, 'http://127.0.0.1').pathname
