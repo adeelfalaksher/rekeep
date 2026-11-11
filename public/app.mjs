@@ -20,7 +20,6 @@ const glyphs = {
   shield: '<path d="M12 3 4 6v5c0 5 3.2 8 8 10 4.8-2 8-5 8-10V6l-8-3Z"/><path d="m9 12 2 2 4-4"/>',
   install: '<path d="M12 3v12m-4-4 4 4 4-4M4 16v4h16v-4"/>',
   close: '<path d="m6 6 12 12M18 6 6 18"/>',
-  play: '<path d="m9 5 11 7-11 7V5Z" fill="currentColor" stroke="none"/>',
 }
 const icon = (name, size = 20) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyphs[name]}</svg>`
 const brand = `<a class="brand" href="/" aria-label="Rekeep home"><img src="/mark.svg" width="33" height="33" alt="">Rekeep</a>`
@@ -51,46 +50,56 @@ async function api(action, body, id) {
 
 function nav(kind) {
   header.className = 'header'
-  header.innerHTML = `<div class="shell header-inner">${brand}<nav aria-label="Main navigation" class="head-links">${kind === 'workspace'
-    ? `<button type="button" class="plain install" data-action="install">${icon('install',18)} <span>Install</span></button><button type="button" class="avatar" aria-label="Account" data-action="account">${safe((session.shop || session.email)[0].toUpperCase())}</button>`
+  const current = location.pathname
+  const active = (route) => current === route ? ' aria-current="page"' : ''
+  const links = kind === 'workspace'
+    ? `<div class="nav-tools"><a class="text-link" href="/workspace">Inbox</a><button type="button" class="plain install" data-action="install">${icon('install',18)} <span>Install</span></button><button type="button" class="avatar" aria-label="Account" data-action="account">${safe((session.shop || session.email)[0].toUpperCase())}</button></div>`
     : kind === 'auth' ? '<a class="text-link" href="/">Back to home</a>'
-    : '<a class="text-link intro-link" href="/intro">How it works</a><a class="text-link" href="/signin">Sign in</a><a class="btn primary small" href="/signup">Get started</a>'}</nav></div>`
-  footer.innerHTML = kind === 'workspace' || kind === 'auth' ? '' : `<div class="shell foot-inner">${brand}<span>Refunds, item by item.</span><a href="/intro">How it works</a></div>`
+    : `<div class="nav-center"><a class="text-link" href="/"${active('/')}>Overview</a><a class="text-link" href="/intro"${active('/intro')}>How it works</a></div><div class="nav-tools"><a class="btn outline small signin" href="/signin">Sign in</a><a class="btn primary small" href="/signup">Get started</a></div>`
+  header.innerHTML = `<div class="shell header-inner">${brand}<nav aria-label="Main navigation" class="head-links nav-${kind}">${links}</nav></div>`
+  footer.innerHTML = kind === 'workspace' || kind === 'auth' ? '' : `<div class="shell foot-inner">${brand}<nav aria-label="Footer navigation"><a href="/intro">How it works</a><a href="/signin">Sign in</a></nav></div>`
 }
 
-function graphic() {
-  return `<div class="hero-art" aria-hidden="true">
-    <div class="art-top"><span class="art-indicator"></span> ORDER #2048 <span class="art-total">$38.00</span></div>
-    <div class="art-receipt">
-      <div class="paper-title"><span>${icon('receipt',21)}</span><div><strong>Order details</strong><small>3 items</small></div></div>
-      <div class="paper-line art-active"><span class="art-icon">${icon('box',18)}</span><div><strong>Ceramic mug</strong><small>Oat · 12 oz</small></div><b>$18.00</b></div>
-      <div class="paper-line"><span class="art-icon">${icon('box',18)}</span><div><strong>Grid notebook</strong><small>Sage · A5</small></div><b>$12.00</b></div>
-      <div class="paper-line"><span class="art-icon">${icon('box',18)}</span><div><strong>Gel pen</strong><small>Black · 0.5 mm</small></div><b>$8.00</b></div>
-    </div>
-    <div class="art-refund"><span>${icon('check',22)}</span><div><small>Refund amount</small><strong>$18.00</strong></div></div>
-    <p class="art-caption">One line refunded. The rest of the order stays intact.</p>
+const steps = [
+  { title: 'Open a refund case', copy: 'Add the order number, the items purchased, and the customer’s message.', icon: 'inbox' },
+  { title: 'Review the affected item', copy: 'Read the evidence behind the match and confirm the exact item and refund amount.', icon: 'box' },
+  { title: 'Keep the refund record', copy: 'Save the refund reference with the case so you can find it later.', icon: 'receipt' },
+]
+
+function tiles() {
+  return `<div class="product-grid" aria-label="Example order and item-level refund">
+    <div class="product-tile order-tile"><div class="tile-top">${icon('receipt',17)} <span>Order #2048</span></div><strong>$38.00</strong><small>3 items purchased</small></div>
+    <div class="product-tile photo-tile mug-tile" aria-hidden="true"></div>
+    <div class="product-tile paper-tile"><div class="tile-top">${icon('quote',17)} <span>Customer message</span></div><blockquote>“The mug arrived with a chip on the rim.”</blockquote></div>
+    <div class="product-tile amount-tile"><div class="tile-top">${icon('check',17)} <span>Refund recorded</span></div><strong>$18.00</strong><small>Ceramic mug · Oat</small></div>
+    <div class="product-tile photo-tile pack-tile" aria-hidden="true"></div>
+    <div class="product-tile paper-tile item-tile"><div class="tile-top">${icon('box',17)} <span>Affected item</span></div><strong>Ceramic mug</strong><small>Oat · 12 oz</small></div>
+    <div class="product-tile keep-tile"><div class="tile-top">${icon('shield',17)} <span>Amount kept</span></div><strong>$20.00</strong><small>Notebook and pen</small></div>
+    <div class="product-tile photo-tile desk-tile" aria-hidden="true"></div>
   </div>`
 }
+
 function home() {
   nav('public')
-  main.innerHTML = `<div class="shell"><section class="hero">
-    <div class="hero-copy"><p class="overline"><span></span> Refund workspace for merchants</p>
-    <h1>Refund the<br>right item<span>.</span></h1>
-    <p class="hero-description">A chipped mug shouldn’t cancel a whole order. Match the complaint to the affected item, review the amount, and keep the refund receipt.</p>
-    <div class="actions"><a class="btn primary" href="/signup">Create an account ${icon('arrow',19)}</a><a class="btn outline" href="/intro">${icon('play',18)} See how it works</a></div></div>
-    ${graphic()}
-    </section>
-    <section class="feature-row" aria-label="What Rekeep does">
-      <article><span class="tile">${icon('quote')}</span><h2>See what the customer said</h2><p>Rekeep highlights the wording it used to suggest an item.</p></article>
-      <article><span class="tile">${icon('box')}</span><h2>Choose the affected line</h2><p>Review the variant and its price before you approve anything.</p></article>
-      <article><span class="tile">${icon('receipt')}</span><h2>Keep a refund record</h2><p>Find the amount, item, and payment reference in one place.</p></article>
-    </section></div>`
+  main.innerHTML = `<section class="shell hero"><div class="product-line">Rekeep for merchants</div>
+    <div class="hero-copy"><h1>Refund the right item.<br>Keep the rest of the order.</h1>
+      <p class="hero-description">Match a customer’s complaint to the item they bought, review the amount, and keep the refund record with the order.</p>
+      <a class="btn primary" href="/signup">Create an account ${icon('arrow',17)}</a>
+    </div></section>
+    ${tiles()}
+    <section class="shell feature-row" aria-label="Refund workflow">${steps.map(({title,copy,icon: symbol}) => `<article><span class="tile">${icon(symbol,19)}</span><h2>${title}</h2><p>${copy}</p></article>`).join('')}</section>`
 }
+
 function intro() {
   nav('public')
-  main.innerHTML = `<div class="shell"><section class="intro-page"><div><p class="overline"><span></span> How Rekeep works</p><h1>One item.<br>One refund.</h1><p class="hero-description">Follow a damaged mug from the customer’s message to the refund receipt.</p><a class="btn primary" href="/signup">Create an account ${icon('arrow',18)}</a></div><figure>
-  <video controls playsinline preload="metadata" poster="/intro-poster.png" aria-label="How Rekeep handles an item-level refund"><source src="/intro.mp4" type="video/mp4"><track kind="captions" src="/intro.vtt" srclang="en" label="English"><a href="/intro.mp4">Download introduction video</a></video><figcaption>Product introduction · 12 seconds</figcaption></figure></section>
-  <section class="feature-row"><article><span class="tile">1</span><h2>Open a case</h2><p>Add the order items and paste the customer’s message.</p></article><article><span class="tile">2</span><h2>Review the match</h2><p>Confirm the exact line and compare the refund with the original order total.</p></article><article><span class="tile">3</span><h2>Save the receipt</h2><p>Record a refund you issued with your payment provider, or use a connected Braintree Sandbox account.</p></article></section></div>`
+  main.innerHTML = `<section class="shell hero intro-hero"><div class="product-line">How it works</div>
+    <div class="hero-copy"><h1>From complaint<br>to refund record.</h1>
+      <p class="hero-description">Follow the order through each step and decide what to refund before saving the case.</p>
+      <a class="btn primary" href="/signup">Create an account ${icon('arrow',17)}</a>
+    </div></section>
+    <section class="shell workflow-list" aria-label="Refund steps">
+      ${steps.map(({title,copy,icon: symbol}, index) => `<article><span class="step-index">0${index+1}</span><div><h2>${title}</h2><p>${copy}</p></div><span class="tile">${icon(symbol,21)}</span></article>`).join('')}
+    </section>`
 }
 function authView(signup) {
   nav('auth')

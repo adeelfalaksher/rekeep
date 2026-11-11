@@ -2,7 +2,7 @@
 
 Rekeep is an installable merchant workspace for item-level refunds. Open a case with the customer’s complaint and the order lines, review the suggested item with its exact evidence, and record the refund. Each store account has its own private inbox.
 
-[Open Rekeep](https://rekeep-app.vercel.app/) · [Watch the product introduction](https://rekeep-app.vercel.app/intro)
+[Open Rekeep](https://rekeep-app.vercel.app/) · [See how it works](https://rekeep-app.vercel.app/intro)
 
 | Before | With Rekeep |
 | --- | --- |
@@ -23,12 +23,12 @@ In Vercel set `APP_ORIGIN` to your deployment’s canonical HTTPS URL and set th
 
 **Record refund** saves a refund you have already issued with your payment provider. It stores a reference and calculates the amount from the selected order line.
 
-To use **Issue Sandbox refund**, configure the optional Braintree values from `.env.example` server-side. Bind the connection to a single Rekeep user ID, use Sandbox-only API keys, and set a server-only Supabase secret key. Use a settled USD Braintree transaction whose order reference and amount match the case. The server records a pending attempt before submitting the partial refund, and a pending outcome blocks additional attempts for that case or transaction.
+To use **Issue Sandbox refund**, configure the optional Braintree values from `.env.example` server-side. Bind the connection to a Rekeep user ID or an explicitly configured verified merchant email, use Sandbox-only API keys, and set a server-only Supabase secret key. Use a settled USD Braintree transaction whose order reference and amount match the case. The server records a pending attempt before submitting the partial refund, and a pending outcome blocks additional attempts for that case or transaction.
 
 The matcher combines a small Naive Bayes classifier trained on synthetic English complaint examples with item and variant matching. Low-evidence or ambiguous messages require manual review. A merchant always chooses whether to proceed.
 
 ## Design references
 
-The sign-in and onboarding structure draws from Deel and Alan. Compact case filters follow Acorns. Transaction details and receipts reference Google Pay and Apple Wallet. Item selection draws from Apple Store and shopping detail layouts. Rekeep uses original artwork and typography with an inbox icon from Lucide.
+The public and workspace UI share a design direction based on the [Altitude card page](https://mobbin.com/sites/sections/57e26228-53f2-4a69-ab19-b1ce00d4a374) and [Altitude product layout](https://mobbin.com/sites/sections/55360ea6-42d4-4647-8988-184af2b11aa6). Rekeep uses original order artwork and an inbox icon from Lucide.
 
 Licensed under MIT. The Lucide inbox icon is distributed under the ISC license.

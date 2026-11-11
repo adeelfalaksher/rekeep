@@ -104,7 +104,12 @@ const auth = async (action, body, res) => {
   return { signedIn: Boolean(result?.access_token) }
 }
 
-const merchantEnabled = (user) => Boolean(gateway && env.SUPABASE_SECRET_KEY && env.BRAINTREE_MERCHANT_UID && user?.id === env.BRAINTREE_MERCHANT_UID)
+function merchantEnabled(user) {
+  if (!gateway || !env.SUPABASE_SECRET_KEY || !user?.id) return false
+  if (env.BRAINTREE_MERCHANT_UID && user.id === env.BRAINTREE_MERCHANT_UID) return true
+  const configuredEmail = env.BRAINTREE_MERCHANT_EMAIL?.trim().toLowerCase()
+  return Boolean(configuredEmail && user.email_confirmed_at && user.email?.toLowerCase() === configuredEmail)
+}
 const caseQuery = (id) => dataPath + '/rekeep_cases?select=' + encode(fields) + '&id=eq.' + id
 const refundTable = dataPath + '/rekeep_refunds'
 const getCase = async (id, access) => (await sup(caseQuery(id), { access }))?.[0]

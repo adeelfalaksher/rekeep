@@ -1,5 +1,5 @@
-const cacheName = 'rekeep-public-1'
-const publicAssets = ['/', '/style.css', '/app.mjs', '/match.mjs', '/mark.svg', '/return-art.svg', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/mask-512.png']
+const cacheName = 'rekeep-public-2'
+const publicAssets = ['/', '/style.css', '/app.mjs', '/match.mjs', '/mark.svg', '/order-art.svg', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/mask-512.png']
 self.addEventListener('install', (event) => event.waitUntil(caches.open(cacheName).then((cache) => cache.addAll(publicAssets))))
 self.addEventListener('activate', (event) => event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith('rekeep-public-') && key !== cacheName).map((key) => caches.delete(key)))).then(() => self.clients.claim())))
 self.addEventListener('fetch', (event) => {

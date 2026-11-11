@@ -65,5 +65,23 @@ test('app serves all public routes and blocks unauthenticated or cross-origin wr
   assert.equal((await fetch(base + '/api/rekeep?action=record', { method:'POST', headers:{ origin:'https://elsewhere.example' } })).status, 403)
   const manifest = await fetch(base + '/manifest.webmanifest').then((response) => response.json())
   assert.equal(manifest.display, 'standalone')
-  assert.equal((await fetch(base + '/intro.mp4', { headers: { Range:'bytes=0-63' } })).status, 206)
+  assert.equal((await fetch(base + '/intro.mp4')).status, 404)
+  assert.doesNotMatch(await fetch(base + '/app.mjs').then((response) => response.text()), /<video|intro\.mp4/)
+  const home = await fetch(base + '/')
+  assert.match(await home.text(), /linerefund\.vercel\.app/)
+})
+
+test('accepts a Braintree control-panel transaction ID and verifies its order', async () => {
+  const requests = []
+  const gateway = sandboxGateway({ BRAINTREE_PUBLIC_KEY:'test', BRAINTREE_PRIVATE_KEY:'test' }, async (_url, request) => {
+    const body = JSON.parse(request.body)
+    requests.push(body)
+    return Response.json({ data: body.variables.legacyId
+      ? { idFromLegacyId: 'graph-id' }
+      : { node: { id:'graph-id', orderId:'O-2048', status:'SETTLED', amount:{ value:'38.00', currencyCode:'USD' } } } })
+  })
+  assert.equal(await gateway.findSettledPayment('abc12345', 'O-2048', 3800), 'graph-id')
+  assert.equal(requests[0].variables.legacyId, 'abc12345')
+  assert.equal(requests[1].variables.id, 'graph-id')
+  await assert.rejects(() => gateway.findSettledPayment('abc12345', 'OTHER-ORDER', 3800))
 })
