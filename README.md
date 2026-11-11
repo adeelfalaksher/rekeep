@@ -29,6 +29,6 @@ The matcher combines a small Naive Bayes classifier trained on synthetic English
 
 ## Design references
 
-The centered homepage, workflow tabs, stacked comparison panels, and footer draw from the [Humble homepage](https://mobbin.com/sites/sections/9e9b4f3e-380b-437c-b4fd-42a7667ac50b), [Humble feature layout](https://mobbin.com/sites/sections/f062f25a-e338-461a-8d6f-f13d3462046e), and [Humble footer](https://mobbin.com/sites/sections/07a09417-ce3c-4b74-a687-f11191cf3d0c). The product photograph and branding were created for Rekeep. The inbox icon is from Lucide.
+The centered homepage, workflow tabs, stacked comparison panels, and footer draw from the [Humble homepage](https://mobbin.com/sites/sections/9e9b4f3e-380b-437c-b4fd-42a7667ac50b), [Humble feature layout](https://mobbin.com/sites/sections/f062f25a-e338-461a-8d6f-f13d3462046e), and [Humble footer](https://mobbin.com/sites/sections/07a09417-ce3c-4b74-a687-f11191cf3d0c). The homepage media uses captures of the Rekeep workspace populated with a sample order. The inbox icon is from Lucide.
 
 Licensed under MIT. The Lucide inbox icon is distributed under the ISC license.

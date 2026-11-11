@@ -52,7 +52,7 @@ function nav(kind) {
   const links = kind === 'workspace'
     ? `<div class="nav-tools"><a class="text-link" href="/workspace"${active('/workspace')}>Inbox</a><button type="button" class="avatar" aria-label="Account" data-action="account">${safe((session.shop || session.email)[0].toUpperCase())}</button></div>`
     : kind === 'auth' ? '<a class="text-link" href="/">Back to home</a>'
-    : `<div class="nav-center"><a class="text-link" href="/intro"${active('/intro')}>How it works</a><a class="text-link" href="/#security">Security</a><a class="text-link" href="/signin">Sign in</a></div><div class="nav-tools"><a class="btn primary small" href="/signup">Get started</a></div>`
+    : `<div class="nav-center"><a class="text-link" href="/intro"${active('/intro')}>How it works</a><a class="text-link" href="/#compare">Compare</a><a class="text-link" href="/#security">Security</a><a class="text-link" href="/signin">Sign in</a></div><div class="nav-tools"><a class="btn primary small" href="/signup">Get started</a></div>`
   header.className = 'header header-' + kind
   header.innerHTML = `<div class="shell header-inner">${brand}<nav aria-label="Main navigation" class="head-links nav-${kind}">${links}</nav></div>`
   footer.innerHTML = kind === 'workspace' || kind === 'auth' ? '' : `<div class="shell foot-inner"><div class="footer-main">
@@ -62,50 +62,101 @@ function nav(kind) {
 }
 
 const steps = [
-  { title: 'Open a refund case', label: 'Customer message', copy: 'Add the order number, purchased items, and the message that prompted the return.', icon: 'inbox' },
-  { title: 'Review the affected item', label: 'Item review', copy: 'Read the evidence behind the match, then confirm the item and the amount.', icon: 'box' },
-  { title: 'Keep the refund record', label: 'Refund record', copy: 'Save the provider’s refund reference with the order so you can find it later.', icon: 'receipt' },
+  { title: 'Open a refund case', copy: 'Add the order number, purchased items, and the message that prompted the return.', icon: 'inbox' },
+  { title: 'Review the affected item', copy: 'Read the evidence behind the match, then confirm the item and the amount.', icon: 'box' },
+  { title: 'Keep the refund record', copy: 'Save the provider’s refund reference with the order so you can find it later.', icon: 'receipt' },
 ]
 
-const breakdown = '<dl class="preview-breakdown"><dt>Original order</dt><dd>$38.00</dd><dt>Mug refund</dt><dd>$18.00</dd><dt>Amount kept</dt><dd>$20.00</dd></dl>'
-const previews = [
-  `<blockquote class="preview-quote">“The ceramic mug arrived with a chip on the rim. The notebook and pen are fine.”</blockquote><p class="preview-meta">Order #2048 <span>3 purchased items</span></p>`,
-  `<p class="preview-match"><span>${icon('check',17)} Ceramic mug</span><strong>$18.00</strong></p><p class="preview-meta">Affected item <span>Oat · 12 oz</span></p><blockquote class="preview-quote">“The ceramic mug arrived with a chip on the rim.”</blockquote>`,
-  breakdown,
+const workflow = [
+  { tab: 'Refund inbox', title: 'See which orders need a decision', image: 'inbox', copy: 'Open cases and resolved refunds in the same workspace.' },
+  { tab: 'New case', title: 'Start with the order and message', image: 'intake', copy: 'Enter the items paid for and the original customer message.' },
+  { tab: 'Item review', title: 'Review the suggested line', image: 'review', copy: 'Check the wording and amount before selecting what to refund.' },
+  { tab: 'Record refund', title: 'Save the provider reference', image: 'record', copy: 'Record the amount and reference together so the case is traceable.' },
+  { tab: 'Resolved case', title: 'Find the decision later', image: 'receipt', copy: 'Keep the customer message, order lines, and refund record together.' },
 ]
+
+function still(image, label, loading = 'lazy') {
+  return `<img src="/workflow-${image}.webp" width="1280" height="530" alt="${safe(label)}" loading="${loading}">`
+}
 
 function workflowPreview() {
   return `<section class="shell workflow-preview" aria-labelledby="workflow-title">
     <h2 id="workflow-title">One record for every return.</h2>
     <div class="preview-tabs" role="tablist" aria-label="Refund workflow">
-      ${steps.map(({label}, i) => `<button type="button" role="tab" id="preview-tab-${i}" aria-controls="preview-panel-${i}" aria-selected="${i === 0}" tabindex="${i ? -1 : 0}" data-preview="${i}">${label}</button>`).join('')}
+      ${workflow.map(({tab}, i) => `<button type="button" role="tab" id="preview-tab-${i}" aria-controls="preview-panel-${i}" aria-selected="${i === 0}" tabindex="${i ? -1 : 0}" data-preview="${i}">${tab}</button>`).join('')}
     </div>
-    <div class="preview-frame">
-      <figure class="preview-photo"><img src="/return-photo.webp" width="1672" height="941" alt="A chipped ceramic mug, notebook and pen beside an open shipping box" fetchpriority="high"></figure>
-      ${steps.map(({title,icon: symbol}, i) => `<article class="preview-panel" role="tabpanel" id="preview-panel-${i}" aria-labelledby="preview-tab-${i}" tabindex="0" ${i ? 'hidden' : ''}>
-        <div class="preview-heading"><span class="tile">${icon(symbol,19)}</span><h3>${title}</h3></div>${previews[i]}
-      </article>`).join('')}
-    </div>
+    ${workflow.map(({title,copy,image}, i) => `<article class="preview-frame preview-panel" role="tabpanel" id="preview-panel-${i}" aria-labelledby="preview-tab-${i}" tabindex="0" ${i ? 'hidden' : ''}>
+      <div class="preview-photo">${still(image,title,i === 0 ? 'eager' : 'lazy')}</div>
+      <div class="preview-caption"><h3>${title}</h3><p>${copy}</p></div>
+    </article>`).join('')}
   </section>`
 }
 
+function videoPlayer(kind) {
+  return `<div class="media-device media-${kind}">
+    <video muted loop playsinline preload="metadata" poster="/workflow-review.webp" data-preview-video aria-label="Rekeep refund workflow with sample data"><source src="/workflow-tour.mp4" type="video/mp4"></video>
+    <button class="media-play" type="button" data-action="watch" aria-label="Play the refund workflow video"><span aria-hidden="true">▶</span></button>
+    <button class="media-motion" type="button" data-action="motion" aria-label="Pause preview animation" hidden>Pause</button>
+  </div>`
+}
+
+const capabilities = [...workflow, { title: "Filter resolved cases", image: "filter", copy: "Find completed refunds without searching through the open inbox." }]
+
+const comparisons = [
+  ['Customer context', 'Message thread', 'Copied notes', 'Message next to the order'],
+  ['Item selection', 'Item described in words', 'Line entered by hand', 'Suggested line with evidence'],
+  ['Refund amount', 'Check the original order', 'Maintain a formula', 'Item and remaining amount together'],
+  ['Provider reference', 'Search a follow-up message', 'Add a separate column', 'Reference saved with the case'],
+]
+
+const faq = [
+  ['Does Rekeep refund the entire order?', 'Each case records the refund for the line you select. You can review the original total, the refund, and the amount kept before continuing.'],
+  ['What if two items match the message?', 'Rekeep asks for manual review when the description is ambiguous. You can select the correct line yourself.'],
+  ['Where do I enter the payment reference?', 'Use Record refund after issuing a refund with your provider. The reference is saved with that order and item.'],
+  ['Who can see our refund cases?', 'You need to sign in to your workspace to see your store’s cases. The public website uses a sample order in its workflow video.'],
+]
+
 function home() {
   nav('public')
-  main.innerHTML = `<section class="shell hero">
-    <div class="hero-copy"><p class="hero-kicker">Meet Rekeep</p>
-      <h1>Refund the right item.<br><span>Keep the rest of the order<span class="accent">.</span></span></h1>
-      <div class="hero-note"><p>When one item arrives damaged, match the customer’s message to the order and record only the affected refund.</p><p><strong>Keep the original order, item and refund reference together.</strong></p></div>
+  main.innerHTML = `<section class="landing-hero">
+    <div class="hero-split"><h1>Give product returns<br>one clear next step<span class="accent">.</span></h1>
+    <div class="hero-side"><p><strong>One damaged item can put a whole order in doubt.<br><span class="accent">See exactly what to refund.</span></strong></p>
+    <p>Match a customer’s message to a purchased item. Review the amount and keep the refund reference with the order.</p></div></div>
+    <div class="hero-media">
+      <div class="hero-ring" aria-hidden="true"></div>
+      <div class="hero-still hero-still-left" aria-hidden="true">${still('inbox','','eager')}</div>
+      <div class="hero-still hero-still-right" aria-hidden="true">${still('receipt','','eager')}</div>
+      <div class="hero-floating" aria-hidden="true">${still('review','','eager')}</div>
+      ${videoPlayer('hero')}
     </div>
+    <div class="hero-actions"><a href="/signup" class="btn primary action-raised">Start a refund case ${icon('arrow',17)}</a><a href="#workflow-title" class="btn outline">See the workflow</a></div>
   </section>
+  <section class="shell hero meet-section"><div class="hero-copy"><p class="hero-kicker">Meet Rekeep</p>
+    <h2>Item-level returns and refunds,<br><span>in one workspace<span class="accent">.</span></span></h2>
+    <div class="hero-note"><p>Bring the customer’s message and order into the same case. See which line matches and how much stays on the order.</p>
+    <p><strong>You review the item. Rekeep keeps the record.</strong></p></div>
+  </div></section>
   ${workflowPreview()}
+  <section class="shell live-step"><h2>Give every case a clear next step.</h2><p>Follow a sample order from the refund inbox to the saved provider reference.</p>${videoPlayer('inline')}</section>
   <section class="shell practice-section" aria-labelledby="practice-title">
-    <div class="practice-copy"><h2 id="practice-title">Handle the refund without losing the order.</h2><p>Keep track of the evidence, the amount, and the provider reference from the same case.</p><a href="/signup" class="btn primary action-raised">Start a refund case ${icon('arrow',17)}</a></div>
+    <div class="practice-copy"><h2 id="practice-title">Handle the refund without losing the order.</h2><p>Keep the evidence, decision, and provider reference with the original order.</p><a href="/signup" class="btn primary action-raised">Start a refund case ${icon('arrow',17)}</a></div>
     <div class="practice-cards">
       <article class="practice-card"><h3>Item selection</h3><div><strong>Customer message</strong><p>“The mug arrived chipped. The notebook and pen are fine.”</p></div><div><strong>With Rekeep</strong><p>Review the $18 mug against the $38 order and confirm which line to refund.</p></div></article>
       <article class="practice-card"><h3>Refund history</h3><div><strong>After the refund</strong><p>The case still needs the item, amount and provider reference for follow-up.</p></div><div><strong>With Rekeep</strong><p>Save the $18 refund record and see the $20 that stayed on the order.</p></div></article>
     </div>
   </section>
-  <section class="shell security-section" id="security"><div><span class="tile">${icon('shield',22)}</span><h2>Private cases. Reviewed refunds.</h2></div><p>Sign in to access your store’s cases. Each refund starts with the item you select and the amount you review.</p><a class="btn outline" href="/intro">See how it works ${icon('arrow',16)}</a></section>`
+  <section class="shell comparison-section" id="compare"><h2>See where every part of the refund lives.</h2>
+    <div class="comparison-scroll" role="region" aria-label="Compare refund workflows" tabindex="0"><table><thead><tr><th scope="col">Workflow</th><th scope="col">Email thread</th><th scope="col">Spreadsheet</th><th scope="col">Rekeep</th></tr></thead>
+    <tbody>${comparisons.map(([label,...values])=>`<tr><th scope="row">${label}</th>${values.map(value=>`<td>${value}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+  </section>
+  <section class="shell capabilities"><h2>What you get in the workspace</h2><div class="capability-grid">
+    ${capabilities.map(({title,copy,image})=>`<article class="capability"><h3>${title}</h3><p>${copy}</p><div>${still(image,title)}</div></article>`).join('')}
+  </div></section>
+  <section class="shell timeline"><h2>How a refund case moves</h2><ol>${steps.map(({title,copy},i)=>`<li><span>0${i+1}.</span><div><h3>${title}</h3><p>${copy}</p></div></li>`).join('')}</ol></section>
+  <section class="shell security-section" id="security"><div><span class="tile">${icon('shield',22)}</span><h2>Private cases. Reviewed refunds.</h2></div><p>Sign in to access your store’s cases. Review the item and amount before approving a refund.</p><a class="btn outline" href="/intro">See how it works ${icon('arrow',16)}</a></section>
+  <section class="shell faq-section"><h2>FAQ</h2>${faq.map(([question,answer])=>`<details><summary>${question}</summary><p>${answer}</p></details>`).join('')}</section>
+  <section class="shell closing-cta"><h2>Ready for the next return?</h2><p>Open your workspace and keep each refund with its order.</p><div class="hero-actions"><a class="btn primary" href="/signup">Create an account</a><a class="btn outline" href="/signin">Sign in</a></div></section>`
+  initializeMedia()
 }
 
 function intro() {
@@ -253,6 +304,53 @@ function reindex() {
   const add = dialog.querySelector('.add-line')
   if (add) add.disabled = rows.length >= 10
 }
+let mediaObserver
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
+function initializeMedia() {
+  if (reduceMotion.matches || !('IntersectionObserver' in window)) return
+  mediaObserver = new IntersectionObserver((entries) => {
+    for (const { target, isIntersecting } of entries) {
+      if (isIntersecting && !target.dataset.paused && !dialog.open) target.play().catch(() => {})
+      else target.pause()
+    }
+  }, { threshold: 0.38 })
+  for (const video of document.querySelectorAll('[data-preview-video]')) {
+    const button = video.parentElement.querySelector('[data-action="motion"]')
+    button.hidden = false
+    mediaObserver.observe(video)
+  }
+}
+
+function watchWorkflow() {
+  for (const video of document.querySelectorAll('[data-preview-video]')) video.pause()
+  show('Rekeep refund workflow', '<video class="workflow-film" controls playsinline preload="metadata" poster="/workflow-review.webp"><source src="/workflow-tour.mp4" type="video/mp4"><track kind="captions" src="/workflow-tour.vtt" srclang="en" label="English"></video><p class="subtle workflow-film-caption">Recorded in the Rekeep workspace with a sample order.</p>')
+  const player = dialog.querySelector('video')
+  player.play().catch(() => {})
+  dialog.addEventListener('close', () => {
+    player.pause()
+    for (const video of document.querySelectorAll('[data-preview-video]')) {
+      if (!mediaObserver) continue
+      mediaObserver.unobserve(video)
+      mediaObserver.observe(video)
+    }
+  }, { once: true })
+}
+
+function toggleMotion(button) {
+  const video = button.parentElement.querySelector('video')
+  if (video.dataset.paused) {
+    delete video.dataset.paused
+    video.play().catch(() => {})
+    button.textContent = 'Pause'
+    button.setAttribute('aria-label', 'Pause preview animation')
+  } else {
+    video.dataset.paused = 'true'
+    video.pause()
+    button.textContent = 'Play'
+    button.setAttribute('aria-label', 'Play preview animation')
+  }
+}
+
 function selectPreview(tab) {
   const tabs = Array.from(document.querySelectorAll('[data-preview]'))
   for (const candidate of tabs) {
@@ -301,6 +399,8 @@ document.addEventListener('click', (event) => {
   if (action === 'new') newCase()
   if (action === 'close') dialog.close()
   if (action === 'account') account()
+  if (action === 'watch') watchWorkflow()
+  if (action === 'motion') toggleMotion(control)
   if (action === 'edit') { editing = true; workspace(); el('#msg').focus() }
   if (action === 'cancel-edit') { editing = false; workspace(); main.querySelector('[data-action="edit"]')?.focus() }
   if (action === 'record' || action === 'braintree') refundDialog(action)

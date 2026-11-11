@@ -75,15 +75,23 @@ test('website serves public routes and blocks unauthenticated or cross-origin wr
   assert.equal((await fetch(base + '/api/rekeep?action=record', { method:'POST', headers:{ origin:'https://elsewhere.example' } })).status, 403)
   assert.equal((await fetch(base + '/manifest.webmanifest')).status, 404)
   assert.equal((await fetch(base + '/intro.mp4')).status, 404)
-  assert.doesNotMatch(await fetch(base + '/app.mjs').then((response) => response.text()), /<video|intro\.mp4/)
+  const script = await fetch(base + '/app.mjs').then((response) => response.text())
+  assert.match(script, /workflow-tour\.mp4/)
+  assert.doesNotMatch(script.slice(script.indexOf('function intro()'), script.indexOf('function authView')), /<video|workflow-tour\.mp4/)
   const home = await fetch(base + '/')
   const html = await home.text()
   assert.match(html, /linerefund\.vercel\.app/)
   assert.doesNotMatch(html, /rel="manifest"|mobile-web-app-capable/)
-  const photo = await fetch(base + '/return-photo.webp')
-  assert.equal(photo.status, 200)
-  assert.equal(photo.headers.get('content-type'), 'image/webp')
-  await photo.arrayBuffer()
+  for (const state of ['inbox','intake','review','record','receipt','filter']) {
+    const image = await fetch(base + '/workflow-' + state + '.webp')
+    assert.equal(image.status, 200)
+    assert.equal(image.headers.get('content-type'), 'image/webp')
+    await image.arrayBuffer()
+  }
+  const video = await fetch(base + '/workflow-tour.mp4')
+  assert.equal(video.status, 200)
+  assert.equal(video.headers.get('content-type'), 'video/mp4')
+  assert.ok((await video.arrayBuffer()).byteLength > 1000)
 })
 
 test('accepts a Braintree control-panel transaction ID and verifies its order', async () => {
