@@ -88,17 +88,6 @@ async function sessionFor(req, res, verify = false) {
 }
 
 const auth = async (action, body, res) => {
-  if (action === 'confirm') {
-    const token = pick(body.token, 3900)
-    const refresh = pick(body.refresh, 3900)
-    if (!/^[\w.-]{1,3900}$/.test(token) || !/^[\w.-]{1,3900}$/.test(refresh)) throw fault(400, 'This confirmation link is invalid or has expired.')
-    // Exchanging the refresh token proves it belongs to the same account.
-    const original = await sup(authPath + '/user', { access: token })
-    const confirmed = await sup(authPath + '/token?grant_type=refresh_token', { method: 'POST', body: { refresh_token: refresh } })
-    if (!confirmed.user || original.id !== confirmed.user.id) throw fault(400, 'This confirmation link is invalid.')
-    save(res, confirmed)
-    return { signedIn: true }
-  }
   const email = pick(body.email, 254).toLowerCase()
   const password = typeof body.password === 'string' ? body.password : ''
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw fault(400, 'Enter a valid email address.')
@@ -130,7 +119,7 @@ export default async function handler(req, res) {
     const write = req.method === 'POST'
     if (!write && req.method !== 'GET') throw fault(405, 'This request method is unavailable.')
     if (write && (req.headers.origin !== appOrigin || req.headers['sec-fetch-site'] === 'cross-site')) throw fault(403, 'Open Rekeep directly to make changes.')
-    if (write && ['signin','signup','confirm'].includes(action)) return json(res, 200, await auth(action, await input(req), res))
+    if (write && ['signin','signup'].includes(action)) return json(res, 200, await auth(action, await input(req), res))
     if (write && action === 'signout') {
       const { rk_access: access } = cookies(req)
       if (access) await sup(authPath + '/logout?scope=local', { access, method: 'POST' }).catch(() => {})

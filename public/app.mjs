@@ -111,14 +111,12 @@ function confirmation(message, link) {
   nav('auth')
   main.innerHTML = `<div class="shell simple"><section class="panel"><span class="tile">${icon('shield')}</span><h1>${safe(message)}</h1><p>${safe(link)}</p><a class="btn primary" href="/signin">Back to sign in</a></section></div>`
 }
-async function confirmLink() {
-  const tokens = new URLSearchParams(location.hash.slice(1))
+function confirmLink() {
+  const link = new URLSearchParams(location.hash.slice(1))
   history.replaceState(null, '', '/confirm')
-  if (!tokens.get('access_token') || !tokens.get('refresh_token')) return confirmation('Check your confirmation link.', 'Open the confirmation link from your email. If you already confirmed it, sign in.')
-  try {
-    await api('confirm', { token: tokens.get('access_token'), refresh: tokens.get('refresh_token') })
-    location.replace('/workspace')
-  } catch (error) { confirmation('Couldn’t confirm your email.', error.message) }
+  if (link.has('error')) return confirmation('Couldn’t confirm your email.', 'This link may have expired. Open the most recent email from Rekeep.')
+  if (link.get('type') === 'signup' && link.has('access_token')) return confirmation('Your email is confirmed.', 'Sign in with the account you just created.')
+  confirmation('Check your confirmation link.', 'Open the confirmation link from your email. If you already confirmed it, sign in.')
 }
 
 const closeBtn = '<button type="button" class="btn outline" data-action="close">Cancel</button>'

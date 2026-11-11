@@ -1,15 +1,47 @@
 {
   "framework": null,
   "outputDirectory": "public",
-  "functions": { "api/rekeep.mjs": { "maxDuration": 30 } },
+  "functions": {
+    "api/rekeep.mjs": {
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
-    { "source": "/:screen(signin|signup|intro|workspace|confirm)", "destination": "/index.html" }
+    {
+      "source": "/:screen(signin|signup|intro|workspace|confirm)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
-    { "source": "/(.*)", "headers": [
-      { "key": "X-Content-Type-Options", "value": "nosniff" },
-      { "key": "Referrer-Policy", "value": "no-referrer" },
-      { "key": "Content-Security-Policy", "value": "default-src 'self'; img-src 'self'; media-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'" }
-    ] }
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; img-src 'self'; media-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "linerefund.vercel.app"
+        }
+      ],
+      "destination": "https://rekeep-app.vercel.app/:path*",
+      "permanent": true
+    }
   ]
 }

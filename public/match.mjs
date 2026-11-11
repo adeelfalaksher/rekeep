@@ -72,14 +72,16 @@ export function makeCase(input) {
   const orderNumber = String(input.orderNumber ?? '').trim()
   const name = String(input.name ?? '').trim()
   const message = String(input.message ?? '').trim()
-  const lines = Array.isArray(input.items) ? input.items.map(({name,variant,price}) => [name, variant, price].join('|')) : []
+  const lines = Array.isArray(input.items) ? input.items : []
   if (!/^[\p{L}\p{N}-]{1,24}$/u.test(orderNumber) || !name || name.length > 64) throw new Error('Enter a customer name and a short order number.')
   if (!message || message.length > maxMessage) throw new Error('Enter a customer message up to 1,600 characters.')
   if (lines.length < 2 || lines.length > 10) throw new Error('Add 2 to 10 order items, one per line.')
   const items = lines.map((line, index) => {
-    const [label, variant, amount, ...extra] = line.split('|').map((part) => part.trim())
-    if (!label || label.length > 80 || !words(label).length || variant?.length > 50 || !/^\d{1,5}(?:\.\d{1,2})?$/.test(amount ?? '') || Number(amount) <= 0 || extra.length) {
-      throw new Error(`Check item ${index + 1}. Use Item name | Variant | Price in USD.`)
+    const label = typeof line?.name === 'string' ? line.name.trim() : ''
+    const variant = typeof line?.variant === 'string' ? line.variant.trim() : ''
+    const amount = typeof line?.price === 'string' ? line.price.trim() : ''
+    if (!label || label.length > 80 || !words(label).length || variant.length > 50 || !/^\d{1,5}(?:\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) {
+      throw new Error(`Check item ${index + 1}. Enter a name and a positive price in USD.`)
     }
     const parts = words(label)
     const detail = words(variant ?? '')
