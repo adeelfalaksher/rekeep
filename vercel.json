@@ -8,6 +8,16 @@
   },
   "rewrites": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "linerefund.vercel.app"
+        }
+      ],
+      "destination": "/renamed.html"
+    },
+    {
       "source": "/:screen(signin|signup|intro|workspace|confirm)",
       "destination": "/index.html"
     }
@@ -29,19 +39,6 @@
           "value": "default-src 'self'; img-src 'self'; media-src 'self'; style-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
         }
       ]
-    }
-  ],
-  "redirects": [
-    {
-      "source": "/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "linerefund.vercel.app"
-        }
-      ],
-      "destination": "https://rekeep-app.vercel.app/:path*",
-      "permanent": true
     }
   ]
 }
