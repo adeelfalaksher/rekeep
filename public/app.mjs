@@ -68,16 +68,12 @@ const steps = [
 ]
 
 const workflow = [
-  { tab: 'Refund inbox', title: 'See which orders need a decision', image: 'inbox', copy: 'Open cases and resolved refunds in the same workspace.' },
-  { tab: 'New case', title: 'Start with the order and message', image: 'intake', copy: 'Enter the items paid for and the original customer message.' },
-  { tab: 'Item review', title: 'Review the suggested line', image: 'review', copy: 'Check the wording and amount before selecting what to refund.' },
-  { tab: 'Record refund', title: 'Save the provider reference', image: 'record', copy: 'Record the amount and reference together so the case is traceable.' },
-  { tab: 'Resolved case', title: 'Find the decision later', image: 'receipt', copy: 'Keep the customer message, order lines, and refund record together.' },
+  { tab: 'Refund inbox', title: 'See which orders need a decision', copy: 'Open cases and resolved refunds in the same workspace.', note: 'Each case keeps the order number and current status together.', lines: [['#O-2048', 'Needs review'], ['#O-2051', 'Resolved'], ['#O-2054', 'Open']], tone: 'blue' },
+  { tab: 'New case', title: 'Start with the order and message', copy: 'Enter the items paid for and the original customer message.', note: 'Capture the customer’s wording before you select the item.', lines: [['Order number', '#O-2048'], ['Customer message', 'The blue mug arrived chipped.'], ['Order items', '3 lines']], tone: 'mint' },
+  { tab: 'Item review', title: 'Review the suggested line', copy: 'Check the wording and amount before selecting what to refund.', note: 'Reread the customer’s message and review the suggested line before confirming.', lines: [['Blue ceramic mug', '$18.00'], ['Grid notebook', '$12.00'], ['Gel pen', '$8.00']], tone: 'amber' },
+  { tab: 'Record refund', title: 'Save the provider reference', copy: 'Record the amount and reference together so the case is traceable.', note: 'Keep the payment provider’s reference with the exact order item.', lines: [['Refund amount', '$18.00'], ['Stays on the order', '$20.00'], ['Sample reference', 'O-2048']], tone: 'amber' },
+  { tab: 'Resolved case', title: 'Find the decision later', copy: 'Keep the customer message, order lines, and refund record together.', note: 'Open the original case whenever you need to check what was refunded.', lines: [['Refund', '$18.00'], ['Retained amount', '$20.00'], ['Case status', 'Resolved']], tone: 'mint' },
 ]
-
-function still(image, label, loading = 'lazy') {
-  return `<img src="/workflow-${image}.webp" width="2160" height="1170" alt="${safe(label)}" loading="${loading}">`
-}
 
 function workflowPreview() {
   return `<section class="shell workflow-preview" aria-labelledby="workflow-title">
@@ -85,29 +81,46 @@ function workflowPreview() {
     <div class="preview-tabs" role="tablist" aria-label="Refund workflow">
       ${workflow.map(({tab}, i) => `<button type="button" role="tab" id="preview-tab-${i}" aria-controls="preview-panel-${i}" aria-selected="${i === 0}" tabindex="${i ? -1 : 0}" data-preview="${i}">${tab}</button>`).join('')}
     </div>
-    ${workflow.map(({title,copy,image}, i) => `<article class="preview-frame preview-panel" role="tabpanel" id="preview-panel-${i}" aria-labelledby="preview-tab-${i}" tabindex="0" ${i ? 'hidden' : ''}>
-      <div class="preview-caption"><h3>${title}</h3><p>${copy}</p></div>
-      <div class="preview-photo">${still(image,title,i === 0 ? 'eager' : 'lazy')}</div>
+    ${workflow.map(({tab,title,copy,note,lines,tone}, i) => `<article class="preview-frame preview-panel" role="tabpanel" id="preview-panel-${i}" aria-labelledby="preview-tab-${i}" tabindex="0" ${i ? 'hidden' : ''}>
+      <div class="preview-caption"><div><h3>${title}</h3><p>${copy}</p></div><p>${note}</p></div>
+      <div class="preview-photo preview-${tone}"><div class="sample-window"><div class="sample-bar"><img src="/mark.svg" width="22" height="22" alt="">${tab}</div><dl>
+      ${lines.map(([label, value], n) => `<div class="sample-line sample-line-${n}"><dt>${label}</dt><dd>${value}</dd></div>`).join('')}</dl>
+      <div class="sample-foot">Sample order <strong>#O-2048</strong></div></div></div>
     </article>`).join('')}
   </section>`
 }
 
-function videoPlayer() {
+function heroLoop() {
   return `<div class="media-device">
-    <video playsinline preload="none" poster="/workflow-poster.webp" aria-label="Rekeep refund workflow with sample data"><source src="/workflow-tour.mp4" type="video/mp4"><track kind="captions" src="/workflow-tour.vtt" srclang="en" label="English"></video>
-    <button class="media-play" type="button" data-action="watch" aria-label="Play the refund workflow video"><span aria-hidden="true"></span></button>
-    <div class="media-end" hidden><div><img src="/mark.svg" width="60" height="60" alt=""><strong>Rekeep</strong></div><button type="button" data-action="watch">Replay video</button></div>
+    <video autoplay muted loop playsinline disablepictureinpicture disableremoteplayback aria-hidden="true" poster="/hero-loop.webp">${matchMedia('(prefers-reduced-motion: reduce)').matches ? '' : '<source src="/workflow-tour.mp4" type="video/mp4">'}</video>
   </div>`
 }
 
-const capabilities = [workflow[2], { title: 'Filter resolved cases', image: 'filter', copy: 'Find completed refunds without searching through the open inbox.' }, workflow[4]]
+const capabilities = [
+  { label: 'Item review', before: 'A message says the blue mug arrived chipped. You have to find which line it refers to.', after: 'The message sits beside the original order. Review the suggested mug and its $18 price before you confirm.' },
+  { label: 'Case history', before: 'An update arrives after the refund. The decision is somewhere in an old thread.', after: 'Filter for resolved cases and reopen the original order with the decision and refund amount together.' },
+  { label: 'Refund record', before: 'The payment provider issues a reference. You still need to connect it to the item.', after: 'Save the reference with the affected line and see the $18 refund alongside the $20 that stayed on the order.' },
+]
 
 const comparisons = [
-  ['Customer context', 'Message thread', 'Copied notes', 'Message next to the order'],
-  ['Item selection', 'Item described in words', 'Line entered by hand', 'Suggested line with evidence'],
-  ['Refund amount', 'Check the original order', 'Maintain a formula', 'Item and remaining amount together'],
-  ['Provider reference', 'Search a follow-up message', 'Add a separate column', 'Reference saved with the case'],
+  ['Customer context', 'Message next to the order', 'Message thread', 'Copied notes', 'Search the inbox'],
+  ['Item selection', 'Suggested line with evidence', 'Item described in words', 'Line entered by hand', 'Check the order manually'],
+  ['Refund amount', 'Item and remaining amount together', 'Check the original order', 'Maintain a formula', 'Calculate per request'],
+  ['Review decision', 'Confirm the affected line in the case', 'Reply in the thread', 'Update a status field', 'Rely on handoff notes'],
+  ['Provider reference', 'Reference saved with the case', 'Search a follow-up message', 'Add a separate column', 'Look it up at the provider'],
+  ['Case history', 'Open and resolved cases together', 'Filter or search messages', 'Maintain a separate log', 'Reconstruct the history'],
 ]
+
+function stepFigure(symbol) {
+  return `<svg class="step-figure" viewBox="0 0 252 124" aria-hidden="true">
+    <path class="step-guide" d="M17 83 126 18l109 65-109 38Z" fill="none" stroke="#e2ded9" stroke-dasharray="3 5"/>
+    <path d="M67 76 126 42l59 34-59 34Z" fill="#eee8e1" stroke="#ded6ce"/>
+    <g class="step-chip"><path d="M73 59 126 29l53 30v13l-53 30-53-30Z" fill="#f1e6df" stroke="#ceaa9b"/>
+    <path d="M73 59 126 29l53 30-53 30Z" fill="#fff8f1" stroke="#f17145" stroke-width="2"/>
+    <path d="M88 59 126 37l38 22-38 22Z" fill="#242424"/>
+    <svg x="115" y="49" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${glyphs[symbol]}</svg></g>
+  </svg>`
+}
 
 const faq = [
   ['Does Rekeep refund the entire order?', 'Each case records the refund for the line you select. You can review the original total, the refund, and the amount kept before continuing.'],
@@ -120,7 +133,7 @@ function home() {
   nav('public')
   main.innerHTML = `<section class="landing-hero">
     <div class="hero-split"><h1>Give product<br>returns one clear<br>next step<span class="accent">.</span></h1>
-    <img class="hero-person" src="/merchant-hero.webp" width="604" height="900" alt="" fetchpriority="high">
+    <div class="hero-person" aria-hidden="true"><img class="merchant-body" src="/merchant-hero.webp" width="604" height="900" alt="" fetchpriority="high"><img class="merchant-head" src="/merchant-hero.webp" width="604" height="900" alt=""></div>
     <div class="hero-side"><p><strong>One damaged item can put a whole order in doubt.<br><span class="accent">See exactly what to refund.</span></strong></p>
     <p>Match a customer’s message to a purchased item. Review the amount and keep the refund reference with the order.</p></div></div>
     <div class="hero-media">
@@ -128,7 +141,7 @@ function home() {
       <div class="hero-landscape hero-landscape-right" aria-hidden="true"></div>
       <div class="hero-ring" aria-hidden="true"></div>
       <div class="hero-actions"><a href="/signup" class="btn primary action-raised">Start a refund case ${icon('arrow',17)}</a></div>
-      ${videoPlayer()}
+      ${heroLoop()}
     </div>
   </section>
   <section class="shell hero meet-section"><div class="hero-copy"><p class="hero-kicker">Meet Rekeep</p>
@@ -145,23 +158,28 @@ function home() {
       <article class="practice-card"><h3>Refund history</h3><div><strong>After the refund</strong><p>The case still needs the item, amount and provider reference for follow-up.</p></div><div><strong>With Rekeep</strong><p>Save the $18 refund record and see the $20 that stayed on the order.</p></div></article>
     </div>
   </section>
-  <section class="shell comparison-section" id="compare"><h2>See where every part of the refund lives.</h2>
-    <div class="comparison-scroll" role="region" aria-label="Compare refund workflows" tabindex="0"><table><thead><tr><th scope="col">Workflow</th><th scope="col">Rekeep</th><th scope="col">Email thread</th><th scope="col">Spreadsheet</th></tr></thead>
-    <tbody>${comparisons.map(([label,email,sheet,rekeep])=>`<tr><th scope="row">${label}</th><td>${rekeep}</td><td>${email}</td><td>${sheet}</td></tr>`).join('')}</tbody></table></div>
+  <section class="shell comparison-section" id="compare" aria-labelledby="comparison-title">
+    <p class="section-chip">Rekeep workspace</p><h2 id="comparison-title">See where every part<br>of the refund lives.</h2>
+    <p class="comparison-note">From the customer’s first message to the payment reference, each refund decision stays with the original order.</p>
+    <div class="comparison-scroll" role="region" aria-label="Compare refund workflows" tabindex="0" data-reveal><table><thead><tr><th scope="col"><span class="sr">Workflow</span></th><th scope="col"><img src="/mark.svg" width="44" height="44" alt="Rekeep"></th><th scope="col">Email thread</th><th scope="col">Spreadsheet</th><th scope="col">Manual process</th></tr></thead>
+    <tbody>${comparisons.map(([label,...values])=>`<tr><th scope="row">${label}</th>${values.map(value=>`<td>${value}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
   </section>
-  <section class="shell capabilities"><h2>What you get in the workspace</h2><div class="capability-grid">
-    ${capabilities.map(({title,copy,image})=>`<article class="capability"><header><h3>${title}</h3><p>${copy}</p></header><figure>${still(image,title)}</figure></article>`).join('')}
-  </div></section>
-  <section class="shell timeline"><h2>How a refund case moves</h2><ol>${steps.map(({title,copy},i)=>`<li><span>0${i+1}.</span><div><h3>${title}</h3><p>${copy}</p></div></li>`).join('')}</ol></section>
+  <section class="shell capabilities" aria-labelledby="capability-title">
+    <header class="capability-intro"><h2 id="capability-title">What you get in the workspace</h2><p>Review the item, find the decision, and keep the refund reference on the same order.</p><a href="/signup" class="btn primary action-raised">Start a refund case ${icon('arrow',17)}</a></header>
+    <div class="capability-grid">${capabilities.map(({label,before,after})=>`<article class="capability" data-reveal><h3>${label}</h3><div><strong>Before</strong><p>${before}</p></div><div><strong>With Rekeep</strong><p>${after}</p></div></article>`).join('')}</div>
+  </section>
+  <section class="shell timeline"><h2>How a refund case moves</h2><ol>${steps.map(({title,copy,icon: symbol},i)=>`<li data-reveal><span>0${i+1}.</span><div><h3>${title}</h3><p>${copy}</p></div>${stepFigure(symbol)}</li>`).join('')}</ol></section>
   <section class="shell security-section" id="security"><div><span class="tile">${icon('shield',22)}</span><h2>Private cases. Reviewed refunds.</h2></div><p>Sign in to access your store’s cases. Review the item and amount before approving a refund.</p><a class="btn outline" href="/intro">See how it works ${icon('arrow',16)}</a></section>
   <section class="shell faq-section"><h2>FAQ</h2><div class="faq-list">${faq.map(([question,answer])=>`<details><summary>${question}</summary><p>${answer}</p></details>`).join('')}</div></section>
   <section class="shell closing-cta"><h2>Ready for the next return?</h2><p>Open your workspace and keep each refund with its order.</p><div class="hero-actions"><a class="btn primary" href="/signup">Create an account</a><a class="btn outline" href="/signin">Sign in</a></div></section>`
-  const player = main.querySelector('.media-device video')
-  player.addEventListener('ended', () => {
-    const ending = player.parentElement.querySelector('.media-end')
-    ending.hidden = false
-    ending.querySelector('button').focus({ preventScroll: true })
-  })
+  const motion = new IntersectionObserver((entries, observer) => {
+    for (const { isIntersecting, target } of entries) {
+      if (!isIntersecting) continue
+      target.classList.add('motion-visible')
+      observer.unobserve(target)
+    }
+  }, { threshold: .18 })
+  main.querySelectorAll('[data-reveal],.preview-panel').forEach(target => motion.observe(target))
 }
 
 function intro() {
@@ -309,17 +327,6 @@ function reindex() {
   const add = dialog.querySelector('.add-line')
   if (add) add.disabled = rows.length >= 10
 }
-function watchWorkflow(button) {
-  const frame = button.closest('.media-device')
-  const player = frame.querySelector('video')
-  if (player.ended) player.currentTime = 0
-  frame.querySelector('.media-end').hidden = true
-  frame.querySelector('.media-play').hidden = true
-  player.controls = true
-  player.focus({ preventScroll: true })
-  player.play().catch(() => {})
-}
-
 function selectPreview(tab) {
   const tabs = Array.from(document.querySelectorAll('[data-preview]'))
   for (const candidate of tabs) {
@@ -368,7 +375,6 @@ document.addEventListener('click', (event) => {
   if (action === 'new') newCase()
   if (action === 'close') dialog.close()
   if (action === 'account') account()
-  if (action === 'watch') watchWorkflow(control)
   if (action === 'edit') { editing = true; workspace(); el('#msg').focus() }
   if (action === 'cancel-edit') { editing = false; workspace(); main.querySelector('[data-action="edit"]')?.focus() }
   if (action === 'record' || action === 'braintree') refundDialog(action)
