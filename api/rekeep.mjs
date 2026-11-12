@@ -1,5 +1,5 @@
 import { makeCase, total, maxMessage } from '../public/match.mjs'
-import { sandboxGateway } from '../lib/braintree.mjs'
+import { sandboxGateway, sandboxRefundStatus } from '../lib/braintree.mjs'
 
 const env = process.env
 const base = env.SUPABASE_URL?.replace(/\/$/, '')
@@ -110,11 +110,13 @@ function merchantEnabled(user) {
   const configuredEmail = env.BRAINTREE_MERCHANT_EMAIL?.trim().toLowerCase()
   return Boolean(configuredEmail && user.email_confirmed_at && user.email?.toLowerCase() === configuredEmail)
 }
-const caseQuery = (id) => dataPath + '/rekeep_cases?select=' + encode(fields) + '&id=eq.' + id
+const caseQuery = (id, includePayment = false) => dataPath + '/rekeep_cases?select=' + encode(includePayment ? fields.replace('source,status,', 'source,status,payment_ref,') : fields) + '&id=eq.' + id
 const refundTable = dataPath + '/rekeep_refunds'
-const getCase = async (id, access) => (await sup(caseQuery(id), { access }))?.[0]
+const getCase = async (id, access, includePayment) => (await sup(caseQuery(id, includePayment), { access }))?.[0]
 const refundOf = (entry) => Array.isArray(entry?.refund) ? entry.refund[0] : entry?.refund
 function requireCase(id) { if (!idPattern.test(id || '')) throw fault(404, 'Case not found.') }
+const sandboxOrder = (id) => 'RK-' + id
+const saveSandboxStatus = (id, previous, body) => sup(refundTable + '?case_id=eq.' + id + '&status=eq.' + previous, { service: true, method: 'PATCH', body })
 
 export default async function handler(req, res) {
   try {
@@ -131,7 +133,7 @@ export default async function handler(req, res) {
       clear(res)
       return json(res, 200, { ok: true })
     }
-    const { access, user } = await sessionFor(req, res, ['session','braintree'].includes(action))
+    const { access, user } = await sessionFor(req, res, ['session','braintree','check-refund'].includes(action))
     if (!write && action === 'session') return json(res, 200, { email: user.email, shop: pick(user.user_metadata?.shop, 60), braintree: merchantEnabled(user) })
     if (!write && action === 'cases') {
       const records = await sup(dataPath + '/rekeep_cases?select=' + encode(fields) + '&order=created_at.desc&limit=100', { access })
@@ -150,6 +152,23 @@ export default async function handler(req, res) {
       const [record] = await sup(caseQuery(id), { access, method: 'PATCH', body: { message }, returning: true })
       if (!record) throw fault(409, 'This case is closed or unavailable.')
       return json(res, 200, { case: record })
+    }
+    if (write && action === 'check-refund') {
+      requireCase(id)
+      if (!merchantEnabled(user)) throw fault(403, 'A Braintree Sandbox connection is unavailable for this account.')
+      const entry = await getCase(id, access, true)
+      const previous = refundOf(entry)
+      if (previous?.source !== 'braintree_sandbox') throw fault(404, 'Sandbox refund not found.')
+      if (['pending','submitted'].includes(previous.status)) {
+        let result
+        try { result = await gateway.checkRefund(previous.reference, previous.payment_ref, sandboxOrder(id), previous.amount_cents) }
+        catch { throw fault(503, 'Braintree could not check this refund. Try again later.') }
+        if (result) await saveSandboxStatus(id, previous.status, result)
+      }
+      const record = await getCase(id, access)
+      const status = refundOf(record)?.status
+      const notice = status === 'pending' ? 'Braintree has not confirmed this refund. Check again later before issuing another refund.' : ''
+      return json(res, 200, { case: record, notice })
     }
     if (write && ['record','braintree'].includes(action)) {
       requireCase(id)
@@ -173,11 +192,11 @@ export default async function handler(req, res) {
         let payment
         try { payment = await gateway.findSettledPayment(reference, entry.order_number, total(entry)) }
         catch { throw fault(422, 'The settled USD Sandbox transaction must match the case order number and total.') }
-        const refundOrder = 'RK-' + id
+        const refundOrder = sandboxOrder(id)
         await sup(refundTable, { method: 'POST', service: true, body: { case_id: id, user_id: user.id, item_id: item.id, source: 'braintree_sandbox', status: 'pending', payment_ref: payment, reference: refundOrder } })
         try {
           const result = await gateway.refund(payment, refundOrder, item.cents)
-          await sup(refundTable + '?case_id=eq.' + id + '&status=eq.pending', { service: true, method: 'PATCH', body: { reference: result.reference, status: result.status === 'SETTLED' ? 'settled' : 'submitted' } })
+          await saveSandboxStatus(id, 'pending', { reference: result.reference, status: sandboxRefundStatus(result.status) })
         } catch {
           return json(res, 202, { case: await getCase(id, access), notice: 'The refund outcome needs verification. Use the displayed reference in Braintree before taking another action.' })
         }

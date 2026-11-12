@@ -1,4 +1,5 @@
 import { analyze, money, total, maxMessage } from './match.mjs'
+import { refundState, refundReceipt } from './refund.mjs'
 
 const el = (selector) => document.querySelector(selector)
 const header = el('#header')
@@ -123,9 +124,10 @@ function stepFigure(symbol) {
 }
 
 const faq = [
+  ['Who uses Rekeep?', 'Store owners and support staff use Rekeep to handle returns for orders already paid for elsewhere. Customers receive the receipt from the store.'],
   ['Does Rekeep refund the entire order?', 'Each case records the refund for the line you select. You can review the original total, the refund, and the amount kept before continuing.'],
   ['What if two items match the message?', 'Rekeep asks for manual review when the description is ambiguous. You can select the correct line yourself.'],
-  ['Where do I enter the payment reference?', 'Use Record refund after issuing a refund with your provider. The reference is saved with that order and item.'],
+  ['How does the customer get their money back?', 'For real orders, issue the refund in your payment provider’s dashboard. Then record the provider’s refund reference in Rekeep and send the customer a copy of the receipt. The connected Braintree Sandbox is for testing.'],
   ['Who can see our refund cases?', 'You need to sign in to your workspace to see your store’s cases. The public website uses a sample order in its workflow video.'],
 ]
 
@@ -135,7 +137,7 @@ function home() {
     <div class="hero-split"><h1>Give product<br>returns one clear<br>next step<span class="accent">.</span></h1>
     <div class="hero-person" aria-hidden="true"><img class="merchant-body" src="/merchant-hero.webp" width="604" height="900" alt="" fetchpriority="high"><img class="merchant-head" src="/merchant-hero.webp" width="604" height="900" alt=""></div>
     <div class="hero-side"><p><strong>One damaged item can put a whole order in doubt.<br><span class="accent">See exactly what to refund.</span></strong></p>
-    <p>Match a customer’s message to a purchased item. Review the amount and keep the refund reference with the order.</p></div></div>
+    <p>For store owners handling refunds on existing orders. Review the affected item and keep a receipt you can share.</p></div></div>
     <div class="hero-media">
       <div class="hero-landscape hero-landscape-left" aria-hidden="true"></div>
       <div class="hero-landscape hero-landscape-right" aria-hidden="true"></div>
@@ -186,7 +188,7 @@ function intro() {
   nav('public')
   main.innerHTML = `<section class="shell hero intro-hero"><div class="hero-copy"><p class="hero-kicker">How it works</p>
     <h1>From complaint<br><span>to refund record<span class="accent">.</span></span></h1>
-    <div class="hero-note"><p>Check the order, choose the affected item, and keep the refund reference with the case.</p></div>
+    <div class="hero-note"><p>Bring an order from your store, choose the affected item, then record the refund from your payment provider and share the receipt.</p></div>
   </div></section>
   <section class="shell workflow-list" aria-label="Refund steps">
     ${steps.map(({title,copy,icon: symbol}, i) => `<article><span class="step-index">0${i + 1}</span><div><h2>${title}</h2><p>${copy}</p></div><span class="tile">${icon(symbol,21)}</span></article>`).join('')}
@@ -233,11 +235,11 @@ function feedback(form, message) {
 }
 function savedRefund(entry) { return Array.isArray(entry.refund) ? entry.refund[0] : entry.refund }
 function caseFor() { return cases.find(({ id }) => id === selectedId) }
-function statusOf(entry) { return savedRefund(entry)?.status === 'pending' ? 'Pending verification' : savedRefund(entry) ? 'Resolved' : 'Open' }
+function statusOf(entry) { return refundState(savedRefund(entry)) }
 function dateOf(value) { return new Intl.DateTimeFormat('en', { month:'short', day:'numeric' }).format(new Date(value)) }
 function itemName(item) { return `${safe(item.name)}${item.detail !== 'Order item' ? ` <small>${safe(item.detail)}</small>` : ''}` }
 
-function caseDetail(entry) {
+function caseDetail(entry, notice) {
   const refund = savedRefund(entry)
   const review = analyze(entry.message, entry)
   if (selectionCase !== entry.id) {
@@ -247,26 +249,45 @@ function caseDetail(entry) {
   const item = entry.items.find((line) => line.id === (refund?.item_id ?? selectedItem))
   const found = entry.items.find((line) => line.id === review.itemId)
   const amount = refund?.amount_cents ?? item?.cents
+  const status = statusOf(entry)
+  const confirmed = status === 'Resolved'
+  const sandbox = refund?.source === 'braintree_sandbox'
+  const canCheck = sandbox && session.braintree && ['pending','submitted'].includes(refund.status)
+  const statusCopy = {
+    pending: 'Braintree has yet to confirm the request. Check its status before taking another action.',
+    submitted: 'Braintree accepted the test refund. It is waiting for settlement.',
+    failed: 'Braintree reports that the test refund failed. Check the reference in the Sandbox dashboard.',
+    settled: 'Braintree confirmed settlement of this test refund.',
+    recorded: 'Refund reference recorded from your payment provider.',
+  }
   return `<div class="case-detail">
     <a class="text-link back-mobile" href="/workspace">${icon('back',18)} Refund inbox</a>
-    <div class="case-title"><div><p class="overline">Order #${safe(entry.order_number)}</p><h1>${safe(entry.customer)}</h1><p class="subtle">Opened ${dateOf(entry.created_at)}</p></div><span class="status-pill ${refund?.status === 'pending' ? 'pending' : refund ? 'closed' : ''}">${statusOf(entry)}</span></div>
+    <div class="case-title"><div><p class="overline">Order #${safe(entry.order_number)}</p><h1>${safe(entry.customer)}</h1><p class="subtle">Opened ${dateOf(entry.created_at)}</p></div><span class="status-pill ${confirmed ? 'closed' : refund ? 'pending' : ''}">${status}</span></div>
     <div class="detail-grid"><div class="detail-column"><section class="panel">
     <div class="panel-title"><h2>Customer message</h2>${!refund && !editing ? '<button type="button" class="text-link" data-action="edit">Edit</button>' : ''}</div>
     ${editing ? `<form class="stack" data-action="message"><label class="sr" for="msg">Customer message</label><textarea name="message" id="msg" rows="4" required maxlength="${maxMessage}">${safe(entry.message)}</textarea><p class="feedback" role="alert" hidden></p><div class="actions"><button class="btn primary" type="submit">Save message</button><button class="btn outline" type="button" data-action="cancel-edit">Cancel</button></div></form>` : `<blockquote class="message">${safe(entry.message)}</blockquote>`}
     </section><section class="panel"><div class="panel-title"><h2>Order items</h2><span class="subtle">${entry.items.length} lines</span></div>
     <div class="order-list" aria-label="Order items">${entry.items.map((line) => `<button type="button" class="line" data-item="${safe(line.id)}" aria-pressed="${line.id === item?.id}" ${refund || editing ? 'disabled' : ''}><span class="line-icon">${icon('box',19)}</span><span class="line-name">${itemName(line)}</span><strong>${money(line.cents)}</strong><span class="radio">${line.id === item?.id ? icon('check',13) : ''}</span></button>`).join('')}</div></section></div>
-    <div class="detail-column"><section class="panel evidence"><div class="panel-title"><h2>${found ? 'Suggested item' : 'Needs review'}</h2><span class="tile">${icon('quote',16)}</span></div>
-    <p>${found ? `<strong>${safe(found.name)}</strong> · ${safe(review.reason)}` : safe(review.reason)}</p>
+    <div class="detail-column"><section class="panel evidence"><div class="panel-title"><h2>${refund ? 'Reviewed item' : found ? 'Suggested item' : 'Needs review'}</h2><span class="tile">${icon('quote',16)}</span></div>
+    <p>${refund && item ? `<strong>${itemName(item)}</strong>` : found ? `<strong>${safe(found.name)}</strong> · ${safe(review.reason)}. Check the item before continuing.` : `${safe(review.reason)} Select the item from the order to continue.`}</p>
     ${review.quote ? `<blockquote>“${safe(review.quote)}”</blockquote>` : ''}
     </section><section class="panel bill"><div class="panel-title"><h2>${refund ? 'Refund record' : 'Refund breakdown'}</h2>${refund ? icon('receipt') : ''}</div>
-    <dl><dt>Original payment</dt><dd>${money(total(entry))}</dd><dt>Amount kept</dt><dd>${amount ? money(total(entry) - amount) : '—'}</dd><dt>Refund amount</dt><dd>${amount ? money(amount) : '—'}</dd></dl>
-    ${refund ? `<div class="receipt-meta"><p>${refund.source === 'external' ? 'Recorded from your payment provider' : refund.status === 'pending' ? 'Verify this refund order in Braintree' : 'PayPal Braintree Sandbox'}</p><div><span>Reference</span><strong>${safe(refund.reference)}</strong></div><div><span>Recorded</span><strong>${dateOf(refund.created_at)}</strong></div></div>` :
-    `<button type="button" class="btn primary full" data-action="record" ${item && !editing ? '' : 'disabled'}>${item ? 'Record refund' : 'Select an order item'} ${icon('arrow',17)}</button>
+    <dl><dt>Original payment</dt><dd>${money(total(entry))}</dd><dt>${refund && !confirmed ? 'Remaining if refunded' : 'Remaining on order'}</dt><dd>${amount ? money(total(entry) - amount) : '—'}</dd><dt>${refund && !confirmed ? 'Requested refund' : 'Refund amount'}</dt><dd>${amount ? money(amount) : '—'}</dd></dl>
+    ${refund ? `<div class="receipt-meta">
+      ${sandbox ? '<p>PayPal Braintree Sandbox · No real money moved</p>' : ''}
+      <p>${statusCopy[refund.status]}</p>
+      <div><span>${refund.status === 'pending' ? 'Refund order ID' : 'Refund reference'}</span><strong>${safe(refund.reference)}</strong></div>
+      <div><span>Recorded</span><strong>${dateOf(refund.created_at)}</strong></div>
+      ${notice ? `<p class="refund-notice">${safe(notice)}</p>` : ''}
+      ${confirmed ? `<button type="button" class="btn outline full" data-action="receipt">${sandbox ? 'View test receipt' : 'View customer receipt'}</button>` : ''}
+      ${canCheck ? '<form class="stack" data-action="check-refund"><p class="feedback" role="alert" hidden></p><button type="submit" class="btn outline full">Check refund status</button></form>' : ''}
+    </div>` :
+    `<button type="button" class="btn primary full" data-action="record" ${item && !editing ? '' : 'disabled'}>${item ? 'Record an issued refund' : 'Select an order item'} ${icon('arrow',17)}</button>
     ${session.braintree ? `<button type="button" class="btn outline full pay-btn" data-action="braintree" ${item && !editing ? '' : 'disabled'}>Issue Sandbox refund</button>` : ''}
-    <p class="subtle bill-note">Record a refund you’ve already issued with your payment provider.</p>`}</section></div></div></div>`
+    <p class="subtle bill-note">Issue real refunds with your payment provider first, then save the reference here.</p>`}</section></div></div></div>`
 }
 
-function workspace() {
+function workspace(notice = '') {
   nav('workspace')
   const entry = caseFor()
   const shown = cases.filter((record) => filter === 'all' || (filter === 'closed' ? statusOf(record) === 'Resolved' : statusOf(record) !== 'Resolved'))
@@ -274,7 +295,7 @@ function workspace() {
     <div class="queue-head"><p class="overline">${safe(session.shop || 'Your store')}</p><h1>Refund inbox</h1><button type="button" class="btn primary full" data-action="new">${icon('plus',18)} New case</button></div>
     <nav class="tabs" aria-label="Filter refund cases">${[['all','All'],['open','Open'],['closed','Resolved']].map(([key,label]) => `<button type="button" aria-pressed="${filter === key}" data-filter="${key}">${label}</button>`).join('')}</nav>
     <div class="queue-items">${shown.length ? shown.map((record) => `<a class="case-link" href="/workspace?case=${encodeURIComponent(record.id)}" data-case="${safe(record.id)}" ${entry?.id === record.id ? 'aria-current="page"' : ''}><span class="queue-icon">${icon('receipt',19)}</span><span><strong>${safe(record.customer)}</strong><small>#${safe(record.order_number)} · ${statusOf(record)}</small></span><span class="case-link-date">${dateOf(record.created_at)}</span></a>`).join('') : '<p class="queue-empty">No cases in this view.</p>'}</div>
-    </aside><section class="workspace-body" aria-label="Case workspace">${entry ? caseDetail(entry) : `<div class="empty-state"><span class="tile">${icon('inbox',24)}</span><h2>${cases.length ? 'Select a case' : 'Your inbox is ready.'}</h2><p>${cases.length ? 'Choose an order to review its message and refund status.' : 'Open a case with the order items and customer message.'}</p>${cases.length ? '' : '<button type="button" class="btn outline" data-action="new">Open first case</button>'}</div>`}</section></div>`
+    </aside><section class="workspace-body" aria-label="Case workspace">${entry ? caseDetail(entry, notice) : `<div class="empty-state"><span class="tile">${icon('inbox',24)}</span><h2>${cases.length ? 'Select a case' : 'Your inbox is ready.'}</h2><p>${cases.length ? 'Choose an order to review its message and refund status.' : 'Start with an existing order and the customer’s message.'}</p>${cases.length ? '' : '<button type="button" class="btn outline" data-action="new">Open first case</button>'}</div>`}</section></div>`
 }
 function openCase(id) {
   selectedId = id
@@ -300,6 +321,7 @@ function orderRow(index) {
 }
 function newCase() {
   show('New refund case', `<form class="stack" data-action="new">
+    <p class="subtle">Use the order from your store and paste the customer’s message below.</p>
     <div class="pair"><label>Order number<input name="order" maxlength="24" required placeholder="2048"></label><label>Customer name<input name="customer" maxlength="64" required placeholder="Maya Chen"></label></div>
     <label>Customer message<textarea name="message" maxlength="${maxMessage}" rows="3" required placeholder="Paste the customer’s message"></textarea></label>
     <div class="item-fields">${orderRow(1)}${orderRow(2)}</div>
@@ -312,11 +334,37 @@ function refundDialog(action) {
   const item = entry.items.find((line) => line.id === selectedItem)
   if (!item) return
   const gateway = action === 'braintree'
-  show(gateway ? 'Issue Sandbox refund' : 'Record a refund', `<form class="stack" data-action="${action}">
+  show(gateway ? 'Issue Sandbox refund' : 'Record an issued refund', `<form class="stack" data-action="${action}">
     <div class="refund-confirm"><span>${itemName(item)}</span><strong>${money(item.cents)}</strong></div>
-    <p class="subtle">${gateway ? 'This will send a partial test refund to Braintree Sandbox after verifying the original payment.' : 'Enter the reference from your payment provider for the refund already issued.'}</p>
+    <p class="subtle">${gateway ? `In Braintree Sandbox, open the original transaction for order #${safe(entry.order_number)} and copy its Transaction ID. Its status must be Settling or Settled. This test uses no real money.` : 'First issue the refund in your payment provider’s dashboard, then copy the refund reference here. Saving this record does not send money.'}</p>
     <label>${gateway ? 'Braintree transaction ID' : 'Refund reference'}<input name="reference" required maxlength="120"></label>
-    <p class="feedback" role="alert" hidden></p><div class="dialog-actions">${closeBtn}<button type="submit" class="btn primary">${gateway ? 'Approve refund' : 'Save refund record'}</button></div></form>`)
+    <p class="feedback" role="alert" hidden></p><div class="dialog-actions">${closeBtn}<button type="submit" class="btn primary">${gateway ? 'Send test refund' : 'Save refund record'}</button></div></form>`)
+}
+function showReceipt() {
+  const entry = caseFor()
+  const receipt = refundReceipt(entry, savedRefund(entry), session.shop)
+  if (!receipt) return
+  show(receipt.title, `<div class="stack receipt-preview">
+    <p class="receipt-shop">${safe(session.shop)}</p>
+    <dl>${receipt.details.map(([label, value]) => `<dt>${safe(label)}</dt><dd>${safe(value)}</dd>`).join('')}</dl>
+    <p class="subtle">${safe(receipt.note)}</p>
+    <label id="receipt-text" hidden>Receipt text<textarea readonly rows="8">${safe(receipt.text)}</textarea></label>
+    <p class="subtle receipt-feedback" role="status"></p>
+    <div class="dialog-actions"><button type="button" class="btn outline" data-action="print-receipt">Print or save PDF</button><button type="button" class="btn primary" data-action="copy-receipt">Copy receipt</button></div>
+  </div>`)
+}
+async function copyReceipt() {
+  const field = dialog.querySelector('#receipt-text')
+  const input = field.querySelector('textarea')
+  const feedback = dialog.querySelector('.receipt-feedback')
+  try {
+    await navigator.clipboard.writeText(input.value)
+    feedback.textContent = savedRefund(caseFor()).source === 'braintree_sandbox' ? 'Test receipt copied.' : 'Receipt copied. Paste it into your reply to the customer.'
+  } catch {
+    field.hidden = false
+    input.select()
+    feedback.textContent = 'Select and copy the receipt text above.'
+  }
 }
 function account() {
   show('Your account', `<div class="stack"><p><strong>${safe(session.shop)}</strong></p><p class="subtle">${safe(session.email)}</p><form class="stack" data-action="signout"><p class="feedback" role="alert" hidden></p><button class="btn outline full" type="submit">Sign out</button></form></div>`)
@@ -378,6 +426,9 @@ document.addEventListener('click', (event) => {
   if (action === 'edit') { editing = true; workspace(); el('#msg').focus() }
   if (action === 'cancel-edit') { editing = false; workspace(); main.querySelector('[data-action="edit"]')?.focus() }
   if (action === 'record' || action === 'braintree') refundDialog(action)
+  if (action === 'receipt') showReceipt()
+  if (action === 'copy-receipt') copyReceipt()
+  if (action === 'print-receipt') window.print()
   if (action === 'add-line') {
     const fields = dialog.querySelector('.item-fields')
     if (fields.children.length < 10) fields.insertAdjacentHTML('beforeend', orderRow(fields.children.length + 1))
@@ -425,9 +476,15 @@ document.addEventListener('submit', async (event) => {
     if (result.case) cases = cases.map((record) => record.id === result.case.id ? result.case : record)
     if (action === 'message') { editing = false; selectionCase = undefined }
     if (dialog.open) dialog.close()
-    workspace()
-    main.focus({ preventScroll:true })
-    announce(result.notice || (action === 'message' ? 'Customer message saved.' : 'Refund record saved.'))
+    workspace(result.notice)
+    if (action === 'check-refund') {
+      const target = main.querySelector('[data-action="check-refund"] button,[data-action="receipt"]') || main
+      target.focus({ preventScroll:true })
+    } else {
+      main.focus({ preventScroll:true })
+    }
+    const update = action === 'message' ? 'Customer message saved.' : action === 'record' ? 'Refund record saved.' : statusOf(result.case)
+    announce(result.notice || update)
   } catch (error) {
     feedback(form, error.message)
   } finally { button.disabled = false }

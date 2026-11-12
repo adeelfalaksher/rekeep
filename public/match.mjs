@@ -25,15 +25,24 @@ for (const [label, sample] of examples) {
   models.set(label, model)
 }
 
+const issueClues = {
+  damaged: /\b(?:damage[ds]?|broken|cracked|chipped|chip|dented|shattered|torn|ripped|scratched|defective|leaking|crushed|snapped)\b/i,
+  missing: /\b(?:missing|omitted|absent|(?:never|did not|didn't) (?:arrive|arrived|receive|received|get|got)|left out|not (?:included|in the (?:box|package)))\b/i,
+  'wrong item': /\b(?:wrong|incorrect|mismatch|mix.up|sent instead|(?:sent|received|got|delivered)\b.{0,55}\bdifferent)\b/i,
+}
+
 function classify(clause) {
-  if (/\b(?:no (?:damage|issues?|problems?)|not (?:damaged|broken|chipped|wrong|missing)|(?:is|are|was|were) fine)\b/i.test(clause)) return 'other'
+  if (/\b(?:(?:no|not|isn't|aren't|wasn't|weren't) (?:damage[ds]?|broken|cracked|chipped|dented|torn|scratched|wrong|missing|issues?|problems?)|(?:is|are|was|were) fine|perfect condition)\b/i.test(clause)) return 'other'
   const tokens = words(clause).filter((word) => vocabulary.has(word))
-  const scores = Array.from(models, ([label, model]) => ({
-    label,
-    score: tokens.reduce((sum, word) => sum + Math.log(((model.terms.get(word) ?? 0) + 1) / (model.count + vocabulary.size)), 0),
-  })).sort((a, b) => b.score - a.score)
-  if (!tokens.length || scores[0].score - scores[1].score < 0.25) return 'other'
-  return scores[0].label
+  const scores = []
+  for (const [label, model] of models) {
+    if (label !== 'other' && !issueClues[label].test(clause)) continue
+    const score = tokens.reduce((sum, word) => sum + Math.log(((model.terms.get(word) ?? 0) + 1) / (model.count + vocabulary.size)), 0)
+    scores.push({ label, score })
+  }
+  scores.sort((a, b) => b.score - a.score)
+  const [best, next] = scores
+  return next && best.score - next.score >= 0.25 ? best.label : 'other'
 }
 
 function mentions(clause, order) {
@@ -61,7 +70,7 @@ export function analyze(message, order) {
     }
   }
   const supported = evidence.filter(({ reason }) => reason !== 'other')
-  const ids = [...new Set((supported.length ? supported : evidence).flatMap((entry) => entry.ids))]
+  const ids = [...new Set(evidence.flatMap((entry) => entry.ids))]
   if (ids.length !== 1) return { status: 'manual', candidates: ids, quote: supported[0]?.quote ?? evidence[0]?.quote ?? '', reason: ids.length > 1 ? 'More than one item could match.' : 'The message does not identify an item clearly.' }
   const match = supported.find((entry) => entry.ids.includes(ids[0]))
   if (!match) return { status: 'manual', candidates: ids, quote: evidence[0]?.quote ?? '', reason: 'Confirm which item had an issue.' }

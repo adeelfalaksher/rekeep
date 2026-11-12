@@ -21,11 +21,11 @@ In Vercel set `APP_ORIGIN` to your deployment’s canonical HTTPS URL and set th
 
 ## Refunds
 
-**Record refund** saves a refund you have already issued with your payment provider. It stores a reference and calculates the amount from the selected order line.
+Rekeep is for sellers and support teams working on orders placed elsewhere. Issue a real refund in your payment provider's dashboard first, then use **Record an issued refund**. Open **View customer receipt** to copy the receipt into a customer reply or print it as a PDF. Buyers receive that receipt from the seller.
 
-To use **Issue Sandbox refund**, configure the optional Braintree values from `.env.example` server-side. Bind the connection to a Rekeep user ID or an explicitly configured verified merchant email, use Sandbox-only API keys, and set a server-only Supabase secret key. Use a settled USD Braintree transaction whose order reference and amount match the case. The server records a pending attempt before submitting the partial refund, and a pending outcome blocks additional attempts for that case or transaction.
+To use **Issue Sandbox refund**, configure the optional Braintree values from `.env.example` server-side. Bind the connection to a Rekeep user ID or an explicitly configured verified merchant email, use Sandbox-only API keys, and set a server-only Supabase secret key. Use a settling or settled USD Braintree transaction whose order reference and amount match the case. The server records an attempt before submitting the partial test refund. **Check refund status** reads the gateway result without creating another refund. When settlement is confirmed, the case shows a test receipt marked as Sandbox.
 
-The matcher combines a small Naive Bayes classifier trained on synthetic English complaint examples with item and variant matching. Low-evidence or ambiguous messages require manual review. A merchant always chooses whether to proceed.
+The matcher combines a small Naive Bayes classifier trained on synthetic English complaint examples with item and variant matching. The complaint must contain wording that supports the predicted issue before Rekeep suggests a line. Low-evidence or ambiguous messages require manual review. A merchant always chooses whether to proceed.
 
 ## Design references
 

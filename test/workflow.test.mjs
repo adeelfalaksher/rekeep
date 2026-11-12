@@ -195,3 +195,59 @@ test('the website handles email confirmation and records an external refund thro
   const cases = await fetch(url('cases'), {headers:{cookie}}).then((response) => response.json())
   assert.equal(cases.cases[0].refund.reference, 'refund-2048')
 })
+
+test('neutral product details do not become refund suggestions', () => {
+  for (const message of [
+    'The mug is in perfect condition, can you refund it?',
+    'The mug is a different size from my old one.',
+    'I ordered a different mug last time.',
+    "The mug isn't damaged.",
+    'The mug arrived broken. Can I return the notebook?',
+  ]) {
+    const order = make(message)
+    assert.equal(analyze(message, order).status, 'manual', message)
+  }
+  const missing = make('I did not receive the notebook.')
+  assert.equal(analyze(missing.message, missing).itemId, 'item-2')
+  const wrong = make('You sent the wrong mug.')
+  assert.equal(analyze(wrong.message, wrong).itemId, 'item-1')
+})
+
+test('gateway refresh confirms the original payment, order, amount and currency without issuing a new refund', async () => {
+  const refund = {
+    id:'gateway-refund', orderId:'RK-test', status:'SETTLED',
+    amount:{ value:'18.00', currencyCode:'USD' }, refundedTransaction:{id:'original-payment'},
+  }
+  const gateway = sandboxGateway({ BRAINTREE_PUBLIC_KEY:'test', BRAINTREE_PRIVATE_KEY:'test' }, async (_url, req) => {
+    const { query, variables } = JSON.parse(req.body)
+    assert.match(query, /^query/)
+    if (variables.id) return Response.json({ data:{ node:refund } })
+    assert.deepEqual(variables.input, {orderId:{is:'RK-test'}})
+    return Response.json({ data:{search:{refunds:{edges:[{node:refund}]}}} })
+  })
+  assert.deepEqual(await gateway.checkRefund('gateway-refund', 'original-payment', 'RK-test', 1800), {reference:'gateway-refund',status:'settled'})
+  assert.deepEqual(await gateway.checkRefund('RK-test', 'original-payment', 'RK-test', 1800), {reference:'gateway-refund',status:'settled'})
+  assert.equal(await gateway.checkRefund('gateway-refund', 'different-payment', 'RK-test', 1800), null)
+  assert.equal(await gateway.checkRefund('gateway-refund', 'original-payment', 'RK-test', 1200), null)
+  refund.status = 'SETTLEMENT_DECLINED'
+  assert.equal((await gateway.checkRefund('gateway-refund', 'original-payment', 'RK-test', 1800)).status, 'failed')
+})
+
+test('a customer receipt is shareable only for a recorded refund or a clearly labeled settled Sandbox test', async () => {
+  const { refundState, refundReceipt } = await import('../public/refund.mjs')
+  const order = make('Private customer message. The mug is damaged.')
+  const entry = {...order, order_number:order.orderNumber, customer:'Private customer'}
+  const refund = {item_id:'item-1',amount_cents:1800,source:'braintree_sandbox',status:'submitted',reference:'test-refund',created_at:'2026-11-12T10:00:00Z'}
+  assert.equal(refundState(refund), 'Refund processing')
+  assert.equal(refundReceipt(entry,refund,'Shop'), null)
+  assert.equal(refundReceipt(entry,{...refund,status:'failed'},'Shop'), null)
+  const sample = refundReceipt(entry,{...refund,status:'settled'},'Shop')
+  assert.match(sample.text, /Sandbox test receipt/)
+  assert.match(sample.text, /No real money moved/)
+  const receipt = refundReceipt(entry,{...refund,source:'external',status:'recorded',reference:'ref-123'},'Shop')
+  assert.match(receipt.text, /Ceramic mug \(Blue\)/)
+  assert.match(receipt.text, /Refund amount: \$18\.00/)
+  assert.match(receipt.text, /Remaining on order: \$20\.00/)
+  assert.match(receipt.text, /ref-123/)
+  assert.doesNotMatch(receipt.text, /Private customer|test-refund/)
+})

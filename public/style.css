@@ -286,6 +286,13 @@ input::placeholder,textarea::placeholder { color: #6d786b; }
 .receipt-meta { display: grid; gap: 8px; font-size: .8rem; color: var(--muted); }
 .receipt-meta > div { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 8px; }
 .receipt-meta strong { color: var(--ink); overflow-wrap: anywhere; text-align: right; }
+.refund-notice { border-left: 2px solid var(--accent); padding-left: 8px; }
+.receipt-preview dl { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 9px 12px; margin: 0; padding-block: 12px; border-block: 1px solid var(--border); }
+.receipt-preview dt { color: var(--muted); }
+.receipt-preview dd { margin: 0; text-align: right; font-weight: 700; overflow-wrap: anywhere; }
+.receipt-shop { font-weight: 720; overflow-wrap: anywhere; }
+.receipt-preview .dialog-actions { flex-wrap: wrap; }
+.receipt-feedback:empty { display: none; }
 .back-mobile { display: none; }
 dialog { background: var(--paper); color: var(--ink); width: min(600px,calc(100vw - 26px)); max-height: calc(100dvh - 24px); border: 1px solid var(--border); border-radius: 19px; padding: 18px; box-shadow: 0 24px 80px #182e2b33; }
 dialog::backdrop { background: #19312868; backdrop-filter: blur(3px); }
@@ -300,6 +307,11 @@ dialog::backdrop { background: #19312868; backdrop-filter: blur(3px); }
 .add-line { justify-self: start; }
 .remove-line { grid-column: 1/-1; justify-self: start; min-height: 31px; }
 .refund-confirm { display: flex; justify-content: space-between; gap: 9px; border-radius: 10px; padding: 12px; background: #edf0ea; }
+@media print {
+  body:has(#dialog[open] .receipt-preview) > :not(#dialog), .receipt-preview .dialog-actions, .receipt-preview .receipt-feedback, #receipt-text, #dialog:has(.receipt-preview) .plain { display: none; }
+  #dialog:has(.receipt-preview) { position: static; margin: 0 auto; max-height: none; width: min(100%, 560px); border: none; box-shadow: none; }
+  #dialog:has(.receipt-preview)::backdrop { background: none; }
+}
 @media (max-width: 1010px) {
   .workspace { grid-template-columns: 211px minmax(0,1fr); gap: 13px; }
   .detail-grid { grid-template-columns: 1fr; }
